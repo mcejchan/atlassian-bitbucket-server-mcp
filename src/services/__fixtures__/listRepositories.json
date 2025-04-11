@@ -1,0 +1,786 @@
+{
+  "size": 18,
+  "limit": 25,
+  "isLastPage": true,
+  "values": [
+    {
+      "slug": "bamboo-docker-image",
+      "id": 5210,
+      "name": "bamboo-docker-image",
+      "description": "Docker image to build PRJ projects on Bamboo with up-to-date stack",
+      "hierarchyId": "38e6897bbc2a5eb02e51",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/bamboo-docker-image.git",
+            "name": "ssh"
+          },
+          {
+            "href": "https://git.repo.com/scm/prj/bamboo-docker-image.git",
+            "name": "http"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/bamboo-docker-image/browse"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "bamboo-specs",
+      "id": 2713,
+      "name": "bamboo-specs",
+      "hierarchyId": "ea21765ce01a734dcfbc",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/bamboo-specs.git",
+            "name": "ssh"
+          },
+          {
+            "href": "https://git.repo.com/scm/prj/bamboo-specs.git",
+            "name": "http"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/bamboo-specs/browse"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "grafana-dashboards",
+      "id": 3375,
+      "name": "grafana-dashboards",
+      "hierarchyId": "145472667322c581c750",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/grafana-dashboards.git",
+            "name": "ssh"
+          },
+          {
+            "href": "https://git.repo.com/scm/prj/grafana-dashboards.git",
+            "name": "http"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/grafana-dashboards/browse"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "prj-analytics-cloud-dwh",
+      "id": 6179,
+      "name": "prj-analytics-cloud-dwh",
+      "description": "Repo with primarily purpose to share queries between PRJ databases and new cloud databases.",
+      "hierarchyId": "b525bf2e84b107ad2da2",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "https://git.repo.com/scm/prj/prj-analytics-cloud-dwh.git",
+            "name": "http"
+          },
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/prj-analytics-cloud-dwh.git",
+            "name": "ssh"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/prj-analytics-cloud-dwh/browse"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "prj-analytics-matomo-chart",
+      "id": 1534,
+      "name": "prj-analytics-matomo-chart",
+      "hierarchyId": "c4ef1c8c3943e20d5d8d",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "https://git.repo.com/scm/prj/prj-analytics-matomo-chart.git",
+            "name": "http"
+          },
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/prj-analytics-matomo-chart.git",
+            "name": "ssh"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/prj-analytics-matomo-chart/browse"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "prj-data-framework-python-burgiss",
+      "id": 3785,
+      "name": "prj-data-framework-python-burgiss",
+      "hierarchyId": "73cfc36d2a2ff66b8ef6",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "https://git.repo.com/scm/prj/prj-data-framework-python-burgiss.git",
+            "name": "http"
+          },
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/prj-data-framework-python-burgiss.git",
+            "name": "ssh"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/prj-data-framework-python-burgiss/browse"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "prj-data-framework-python-runner",
+      "id": 2714,
+      "name": "prj-data-framework-python-runner",
+      "hierarchyId": "1f260bd9b429dd58a479",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/prj-data-framework-python-runner.git",
+            "name": "ssh"
+          },
+          {
+            "href": "https://git.repo.com/scm/prj/prj-data-framework-python-runner.git",
+            "name": "http"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/prj-data-framework-python-runner/browse"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "prj-docker-images",
+      "id": 6587,
+      "name": "prj-docker-images",
+      "hierarchyId": "25c147dc8efa5eb5fae2",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/prj-docker-images.git",
+            "name": "ssh"
+          },
+          {
+            "href": "https://git.repo.com/scm/prj/prj-docker-images.git",
+            "name": "http"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/prj-docker-images/browse"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "prj-docker-matomo",
+      "id": 1533,
+      "name": "prj-docker-matomo",
+      "hierarchyId": "2cbf6bfa54971c26d9bb",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "https://git.repo.com/scm/prj/prj-docker-matomo.git",
+            "name": "http"
+          },
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/prj-docker-matomo.git",
+            "name": "ssh"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/prj-docker-matomo/browse"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "prj-git-release-checker",
+      "id": 5132,
+      "name": "prj-git-release-checker",
+      "description": "Tool for getting all modifications since a given date for all PRJ repos and also for release informaiton.",
+      "hierarchyId": "d58d30e04fcf882480dd",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "https://git.repo.com/scm/prj/prj-git-release-checker.git",
+            "name": "http"
+          },
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/prj-git-release-checker.git",
+            "name": "ssh"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/prj-git-release-checker/browse"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "prj-highcharts-config",
+      "id": 1146,
+      "name": "prj-highcharts-config",
+      "hierarchyId": "150d5b0aed4b78ef81ec",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/prj-highcharts-config.git",
+            "name": "ssh"
+          },
+          {
+            "href": "https://git.repo.com/scm/prj/prj-highcharts-config.git",
+            "name": "http"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/prj-highcharts-config/browse"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "git-repo",
+      "id": 5605,
+      "name": "git-repo",
+      "hierarchyId": "28b47cfbdd980e71f7ee",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/git-repo.git",
+            "name": "ssh"
+          },
+          {
+            "href": "https://git.repo.com/scm/prj/git-repo.git",
+            "name": "http"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/git-repo/browse"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "prj-matomo-prod-dump",
+      "id": 7683,
+      "name": "prj-matomo-prod-dump",
+      "description": "Contains matomo prod dump",
+      "hierarchyId": "27a69a195602e684764c",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "https://git.repo.com/scm/prj/prj-matomo-prod-dump.git",
+            "name": "http"
+          },
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/prj-matomo-prod-dump.git",
+            "name": "ssh"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/prj-matomo-prod-dump/browse"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "prj-python-libraries",
+      "id": 2832,
+      "name": "prj-python-libraries",
+      "hierarchyId": "3c6667a93a12a924ba34",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/prj-python-libraries.git",
+            "name": "ssh"
+          },
+          {
+            "href": "https://git.repo.com/scm/prj/prj-python-libraries.git",
+            "name": "http"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/prj-python-libraries/browse"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "prj-shared-ui-components",
+      "id": 1124,
+      "name": "prj-shared-ui-components",
+      "hierarchyId": "09d516bd0e6876472d79",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "https://git.repo.com/scm/prj/prj-shared-ui-components.git",
+            "name": "http"
+          },
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/prj-shared-ui-components.git",
+            "name": "ssh"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/prj-shared-ui-components/browse"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "prj-spring-security",
+      "id": 7112,
+      "name": "prj-spring-security",
+      "hierarchyId": "8dee2a05d1c45c2b2c50",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/prj-spring-security.git",
+            "name": "ssh"
+          },
+          {
+            "href": "https://git.repo.com/scm/prj/prj-spring-security.git",
+            "name": "http"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/prj-spring-security/browse"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "sandbox_breakdown2java",
+      "id": 1955,
+      "name": "sandbox_breakdown2java",
+      "hierarchyId": "d8aa4a6ae394364f9e2e",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "https://git.repo.com/scm/prj/sandbox_breakdown2java.git",
+            "name": "http"
+          },
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/sandbox_breakdown2java.git",
+            "name": "ssh"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/sandbox_breakdown2java/browse"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "temp-npm-project",
+      "id": 1586,
+      "name": "temp-npm-project",
+      "hierarchyId": "b3f1117b9b9f097077a5",
+      "scmId": "git",
+      "state": "AVAILABLE",
+      "statusMessage": "Available",
+      "forkable": true,
+      "project": {
+        "key": "PRJ",
+        "id": 217,
+        "name": "PRJ - PRJ Tools",
+        "public": false,
+        "type": "NORMAL",
+        "links": {
+          "self": [
+            {
+              "href": "https://git.repo.com/projects/PRJ"
+            }
+          ]
+        }
+      },
+      "public": false,
+      "archived": false,
+      "links": {
+        "clone": [
+          {
+            "href": "ssh://git@git.repo.com:7999/prj/temp-npm-project.git",
+            "name": "ssh"
+          },
+          {
+            "href": "https://git.repo.com/scm/prj/temp-npm-project.git",
+            "name": "http"
+          }
+        ],
+        "self": [
+          {
+            "href": "https://git.repo.com/projects/PRJ/repos/temp-npm-project/browse"
+          }
+        ]
+      }
+    }
+  ],
+  "start": 0
+}

@@ -1,0 +1,45 @@
+{
+  "name": "@eguenichon/atlassian-bitbucket-server-mcp",
+  "version": "1.0.0",
+  "description": "Node.js/TypeScript MCP server for Atlassian Bitbucket. Enables AI systems (LLMs) to interact with workspaces, repositories, and pull requests via tools (list, get, comment, search). Connects AI directly to version control workflows through the standard MCP interface.",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "type": "commonjs",
+  "bin": {
+    "mcp-atlassian-bitbucket": "./dist/src/index.js"
+  },
+  "scripts": {
+    "generate": "npx @openapitools/openapi-generator-cli generate -i openapi/bitbucket.pyfiltered.subset.openapi.v3.json -g typescript-fetch -o src/generated --config openapi/openapi-generator-config.json",
+    "build": "tsc",
+    "test": "jest",
+    "start": "npm run build && node dist/src/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "typescript",
+    "atlassian",
+    "bitbucket",
+    "repository",
+    "version-control",
+    "pull-request",
+    "server",
+    "model-context-protocol",
+    "tools",
+    "resources"
+  ],
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.13.14",
+    "@types/axios": "^0.14.4",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.3.0",
+    "typescript": "^5.8.3",
+    "eslint": "^9.23.0",
+    "prettier": "^3.5.3"
+  },
+  "dependencies": {
+    "axios": "^1.8.4",
+    "dotenv": "^16.4.7"
+  }
+}

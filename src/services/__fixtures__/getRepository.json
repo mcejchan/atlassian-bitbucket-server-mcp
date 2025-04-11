@@ -1,0 +1,44 @@
+{
+  "slug": "git-repo",
+  "id": 5605,
+  "name": "git-repo",
+  "hierarchyId": "28b47cfbdd980e71f7ee",
+  "scmId": "git",
+  "state": "AVAILABLE",
+  "statusMessage": "Available",
+  "forkable": true,
+  "project": {
+    "key": "PRJ",
+    "id": 217,
+    "name": "PRJ - PRJ Tools",
+    "public": false,
+    "type": "NORMAL",
+    "links": {
+      "self": [
+        {
+          "href": "https://git.repo.com/projects/PRJ"
+        }
+      ]
+    }
+  },
+  "public": false,
+  "archived": false,
+  "defaultBranch": "master",
+  "links": {
+    "clone": [
+      {
+        "href": "ssh://git@git.repo.com:7999/prj/git-repo.git",
+        "name": "ssh"
+      },
+      {
+        "href": "https://git.repo.com/scm/prj/git-repo.git",
+        "name": "http"
+      }
+    ],
+    "self": [
+      {
+        "href": "https://git.repo.com/projects/PRJ/repos/git-repo/browse"
+      }
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "supportsES6": true,
+  "typescriptThreePlus": true,
+  "modelPropertyNaming": "camelCase",
+  "apiPackage": "api",
+  "modelPackage": "models",
+  "generateApis": true,
+  "generateModels": true,
+  "useSingleRequestParameter": true,
+  "operationIds": [
+    "getProject",
+    "getProjects",
+    "createProject",
+    "deleteProject",
+    "updateProject"
+  ]
+} 

@@ -1,0 +1,62 @@
+{
+  "id": "12345679e4240c758669d14db6aad117e72d",
+  "displayId": "1234567",
+  "author": {
+    "name": "jrambo",
+    "emailAddress": "test@email.com",
+    "active": true,
+    "displayName": "John Rambo",
+    "id": 3930,
+    "slug": "jrambo",
+    "type": "NORMAL",
+    "links": {
+      "self": [
+        {
+          "href": "https://git.repo.com/users/jrambo"
+        }
+      ]
+    }
+  },
+  "authorTimestamp": 1739188337000,
+  "committer": {
+    "name": "jrambo",
+    "emailAddress": "test@email.com",
+    "active": true,
+    "displayName": "John Rambo",
+    "id": 3930,
+    "slug": "jrambo",
+    "type": "NORMAL",
+    "links": {
+      "self": [
+        {
+          "href": "https://git.repo.com/users/jrambo"
+        }
+      ]
+    }
+  },
+  "committerTimestamp": 1739188337000,
+  "message": "a nice message",
+  "parents": [
+    {
+      "id": "3e76649eb9359a1b64ac377bf80a15840e865ac1",
+      "displayId": "3e76649eb93",
+      "author": {
+        "name": "jrambo",
+        "emailAddress": "test@email.com"
+      },
+      "authorTimestamp": 1735831612000,
+      "committer": {
+        "name": "jrambo",
+        "emailAddress": "test@email.com"
+      },
+      "committerTimestamp": 1735831612000,
+      "message": "a nice message",
+      "parents": [
+        {
+          "id": "5ac1a00abe313b11e293cc9630e132791264c2d9",
+          "displayId": "5ac1a00abe3"
+        }
+      ]
+    }
+  ]
+}

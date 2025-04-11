@@ -1,0 +1,11 @@
+{
+  "supportsES6": true,
+  "npmName": "@mcp/bitbucket-api",
+  "npmVersion": "1.0.0",
+  "typescriptThreePlus": true,
+  "enumPropertyNaming": "UPPERCASE",
+  "modelPropertyNaming": "camelCase",
+  "apiPackage": "api",
+  "modelPackage": "models",
+  "useSingleRequestParameter": true
+} 

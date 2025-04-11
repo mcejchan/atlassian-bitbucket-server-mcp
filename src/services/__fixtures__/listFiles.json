@@ -1,0 +1,11 @@
+{
+  "values": [
+    "git-repo-database-data/.gitignore",
+    "git-repo-database-data/file"
+  ],
+  "size": 25,
+  "isLastPage": false,
+  "start": 0,
+  "limit": 25,
+  "nextPageStart": 25
+}

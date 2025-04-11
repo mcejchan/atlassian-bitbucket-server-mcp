@@ -1,0 +1,24 @@
+{
+  "size": 2,
+  "limit": 25,
+  "isLastPage": true,
+  "values": [
+    {
+      "id": "refs/heads/master",
+      "displayId": "master",
+      "type": "BRANCH",
+      "latestCommit": "12345679e4240c758669d14db6aad117e72d",
+      "latestChangeset": "12345679e4240c758669d14db6aad117e72d",
+      "isDefault": true
+    },
+    {
+      "id": "refs/heads/feature/observability",
+      "displayId": "feature/observability",
+      "type": "BRANCH",
+      "latestCommit": "96a7f6857b365abb60d96a3a5921dc0e75bcee60",
+      "latestChangeset": "96a7f6857b365abb60d96a3a5921dc0e75bcee60",
+      "isDefault": false
+    }
+  ],
+  "start": 0
+}
