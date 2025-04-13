@@ -31,12 +31,12 @@ export function registerProjectCommands(program: Command): void {
 		.option(
 			'-l, --limit <number>',
 			'Maximum number of projects to return',
-			(value) => parseInt(value, 10),
+			(value: any) => parseInt(value, 10),
 		)
-		.option('-p, --page <number>', 'Page number for pagination', (value) =>
+		.option('-p, --page <number>', 'Page number for pagination', (value: any) =>
 			parseInt(value, 10),
 		)
-		.action(async (options) => {
+		.action(async (options: any) => {
 			const actionLogger = Logger.forContext(
 				'cli/atlassian.projects.cli.ts',
 				'list-projects',
@@ -76,7 +76,7 @@ export function registerProjectCommands(program: Command): void {
 			'-k, --project-key <key>',
 			'Key of the project to retrieve (identifies the project)',
 		)
-		.action(async (options) => {
+		.action(async (options: any) => {
 			const actionLogger = Logger.forContext(
 				'cli/atlassian.projects.cli.ts',
 				'get-project',

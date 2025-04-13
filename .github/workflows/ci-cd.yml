@@ -37,25 +37,29 @@ jobs:
             - name: Install dependencies
               run: npm ci # Clean install preserving package-lock.json
 
-            # Step 4: Run linters (Example - Adjust if you use different linters)
+            # Step 4: Generate code from OpenAPI spec
+            - name: Generate Code
+              run: npm run generate
+
+            # Step 5: Run linters
             - name: Lint Check
               run: npm run lint # Assuming you have a lint script
 
-            # Step 5: Build the package
+            # Step 6: Build the package
             - name: Build
               run: npm run build # Compiles TypeScript to JavaScript
 
-            # Step 6: Ensure executable permissions
+            # Step 7: Ensure executable permissions
             - name: Set executable permissions
               run: chmod +x dist/index.js
 
-            # Step 7: Run tests to ensure quality
+            # Step 8: Run tests to ensure quality
             - name: Verify tests
               run: npm test # Runs Jest tests
 
             # --- Release Specific Steps (Only run on push to main) ---
 
-            # Step 8: Set up Docker Buildx
+            # Step 9: Set up Docker Buildx
             - name: Set up QEMU
               if: github.event_name == 'push' && github.ref == 'refs/heads/main'
               uses: docker/setup-qemu-action@v3
@@ -63,7 +67,7 @@ jobs:
               if: github.event_name == 'push' && github.ref == 'refs/heads/main'
               uses: docker/setup-buildx-action@v3
 
-            # Step 9: Login to Docker Hub
+            # Step 10: Login to Docker Hub
             - name: Login to Docker Hub
               if: github.event_name == 'push' && github.ref == 'refs/heads/main'
               uses: docker/login-action@v3
@@ -71,14 +75,14 @@ jobs:
                   username: ${{ secrets.DOCKERHUB_USERNAME }}
                   password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-            # Step 10: Configure Git for Release
+            # Step 11: Configure Git for Release
             - name: Configure Git User
               if: github.event_name == 'push' && github.ref == 'refs/heads/main'
               run: |
                   git config --global user.email "github-actions[bot]@users.noreply.github.com"
                   git config --global user.name "github-actions[bot]"
 
-            # Step 11: Determine next version (Dry Run)
+            # Step 12: Determine next version (Dry Run)
             - name: Determine next version with Semantic Release (Dry Run)
               if: github.event_name == 'push' && github.ref == 'refs/heads/main'
               id: semantic_dry_run
@@ -98,7 +102,7 @@ jobs:
                   fi
                   echo "$output" # Print full output for debugging
 
-            # Step 12: Build and Push Docker image
+            # Step 13: Build and Push Docker image
             - name: Build and push Docker image
               # Also check if a version was determined
               if: steps.semantic_dry_run.outputs.version && github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -110,7 +114,7 @@ jobs:
                   # Example tags: your-dockerhub-user/your-repo-name:1.2.3, your-dockerhub-user/your-repo-name:latest
                   # Consider adding more tags like git sha: ${{ github.sha }}
 
-            # Step 13: Run semantic-release (Final)
+            # Step 14: Run semantic-release (Final)
             - name: Semantic Release (Final)
               id: semantic_final
               # Also check if a version was determined
@@ -122,7 +126,7 @@ jobs:
                   echo "Running semantic-release for final version bump, GitHub release, and npm publishing"
                   npx semantic-release
             
-            # Step 14: Handle case where no release is needed (on push to main)
+            # Step 15: Handle case where no release is needed (on push to main)
             - name: No release needed
               if: (!steps.semantic_dry_run.outputs.version && github.event_name == 'push' && github.ref == 'refs/heads/main')
               run: echo "No new version detected on main branch push. Skipping Docker push and final semantic-release."

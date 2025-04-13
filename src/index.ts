@@ -2,12 +2,12 @@
 console.log('[MCP SERVER] Starting Bitbucket MCP server...');
 console.log('[MCP SERVER] Node version:', process.version);
 process.on('uncaughtException', (err) => {
-  console.error('[MCP SERVER] Uncaught Exception:', err);
-  process.exit(1);
+	console.error('[MCP SERVER] Uncaught Exception:', err);
+	process.exit(1);
 });
 process.on('unhandledRejection', (reason) => {
-  console.error('[MCP SERVER] Unhandled Rejection:', reason);
-  process.exit(1);
+	console.error('[MCP SERVER] Unhandled Rejection:', reason);
+	process.exit(1);
 });
 import 'module-alias/register';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
