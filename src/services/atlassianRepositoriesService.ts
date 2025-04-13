@@ -1,58 +1,43 @@
 import { BitbucketClient } from '../utils/http/bitbucket-client';
 import { Logger } from '../utils/logger.util';
-
-// Types based on Bitbucket API (refine with OpenAPI if needed)
-export interface Repository {
-    hierarchyId?: string;
-    scmId: string;
-    slug: string;
-    statusMessage?: string;
-    archived?: boolean;
-    forkable?: boolean;
-    defaultBranch?: string;
-    partition?: number;
-    relatedLinks?: Record<string, unknown>;
-    project: {
-        avatar?: string;
-        description?: string;
-        scope?: string;
-        name: string;
-        key: string;
-        id: number;
-        type?: string;
-        public?: boolean;
-    };
-    description?: string;
-    scope?: string;
-    origin?: Repository;
-    name: string;
-    id: number;
-    state: string;
-    public?: boolean;
-    links?: { self: { href: string }[] };
-}
-
-interface PagedResponse<T> {
-    size: number;
-    limit: number;
-    isLastPage: boolean;
-    values: T[];
-    start?: number;
-    nextPageStart?: number;
-}
-
-type RepositoriesResponse = PagedResponse<Repository>;
-type RepositoryDetailed = Repository;
+import { ProjectApi } from '@generated/apis/ProjectApi';
+import { RepositoryApi } from '@generated/apis/RepositoryApi';
+// Import specific request/response types needed
+import type { 
+    GetRepositories1Request, 
+    StreamFileContentRawRequest, 
+    GetBranchesRequest, 
+    GetBranchesOrderByEnum,
+    GetCommitsRequest,
+    GetCommitRequest,
+    StreamFiles1Request
+} from '@generated/apis/RepositoryApi'; 
+import type { GetRepositoryRequest, GetDefaultBranch2Request } from '@generated/apis/ProjectApi'; 
+import type { 
+    GetRepositoriesRecentlyAccessed200Response, 
+    RestRepository, 
+    GetBranches200Response, 
+    GetCommits200Response,
+    RestCommit,
+    StreamFiles200Response,
+    RestMinimalRef
+} from '@generated/models/index';
 
 export class AtlassianRepositoriesService {
-	private static readonly API_PATH = '/rest/api/latest';
-	private readonly client: BitbucketClient;
 	private readonly logger: Logger;
 	private static instance: AtlassianRepositoriesService;
+	private readonly projectApi: ProjectApi;
+	private readonly repositoryApi: RepositoryApi;
 
 	private constructor() {
 		this.logger = Logger.forContext('services/atlassianRepositoriesService');
-		this.client = BitbucketClient.getInstance();
+
+		const apiConfig = BitbucketClient.getInstance().getGeneratedClientConfiguration();
+
+		this.projectApi = new ProjectApi(apiConfig);
+		this.repositoryApi = new RepositoryApi(apiConfig);
+		
+		this.logger.debug('Service initialized with generated API clients using config from BitbucketClient.');
 	}
 
 	public static getInstance(): AtlassianRepositoriesService {
@@ -68,17 +53,22 @@ export class AtlassianRepositoriesService {
      * @param params Optional query parameters (e.g., { limit: 50 })
      * @returns A promise resolving to the paged response of repositories.
      */
-	async listRepositories(projectKey: string, params: { limit?: number; start?: number } = {}): Promise<RepositoriesResponse> {
+	async listRepositories(projectKey: string, params: { limit?: number; start?: number } = {}): Promise<GetRepositoriesRecentlyAccessed200Response> {
 		if (!projectKey) {
 			throw new Error('projectKey parameter is required');
 		}
 		const methodLogger = this.logger.forMethod('listRepositories');
 		methodLogger.debug(`Listing repositories for project: ${projectKey} with params:`, params);
-		const response = await this.client.get<RepositoriesResponse>(
-			`${AtlassianRepositoriesService.API_PATH}/projects/${projectKey}/repos`,
-			{ params }
-		);
-		methodLogger.debug(`Found ${response.size} repositories total.`);
+		
+		const request: GetRepositories1Request = {
+			projectkey: projectKey,
+			limit: params.limit,
+			start: params.start
+		};
+
+		const response = await this.repositoryApi.getRepositories1(request);
+		
+		methodLogger.debug(`Found ${response.size ?? 'unknown'} repositories total.`);
 		return response;
 	}
 
@@ -88,15 +78,20 @@ export class AtlassianRepositoriesService {
      * @param repoSlug The slug of the repository.
      * @returns A promise resolving to the detailed repository information.
      */
-	async getRepository(projectKey: string, repoSlug: string): Promise<RepositoryDetailed> {
+	async getRepository(projectKey: string, repoSlug: string): Promise<RestRepository> {
 		if (!projectKey || !repoSlug) {
 			throw new Error('projectKey and repoSlug parameters are required');
 		}
 		const methodLogger = this.logger.forMethod('getRepository');
 		methodLogger.debug(`Getting repository: ${repoSlug} in project: ${projectKey}`);
-		const response = await this.client.get<RepositoryDetailed>(
-			`${AtlassianRepositoriesService.API_PATH}/projects/${projectKey}/repos/${repoSlug}`
-		);
+		
+		const request: GetRepositoryRequest = {
+			projectKey: projectKey,
+			repositorySlug: repoSlug
+		};
+
+		const response = await this.projectApi.getRepository(request);
+
 		methodLogger.debug(`Retrieved details for repository: ${response.name}`);
 		return response;
 	}
@@ -120,15 +115,31 @@ export class AtlassianRepositoriesService {
 		}
 		const methodLogger = this.logger.forMethod('getFileContent');
 		methodLogger.debug(`Getting file content for ${filePath} in repo: ${repoSlug}, project: ${projectKey}, at: ${atRef || 'default'}`);
-		const params: Record<string, string> = {};
-		if (atRef) params['at'] = atRef;
-		// The Bitbucket API returns raw file content as text
-		const response = await this.client.get<string>(
-			`${AtlassianRepositoriesService.API_PATH}/projects/${projectKey}/repos/${repoSlug}/raw/${filePath}`,
-			{ params, responseType: 'text' }
-		);
-		methodLogger.debug(`Retrieved file content for ${filePath} (length: ${response.length})`);
-		return response;
+
+		const request: StreamFileContentRawRequest = {
+			projectKey: projectKey,
+			repositorySlug: repoSlug,
+			path: filePath,
+			at: atRef
+		};
+
+		const apiResponse = await this.repositoryApi.streamFileContentRawRaw(request);
+
+        const response: Response = apiResponse.raw;
+
+        if (!response.ok) {
+            let errorBody = '';
+            try {
+                errorBody = await response.text();
+            } catch (e) { /* Ignore inability to read body */ }
+            const errorMessage = errorBody || response.statusText;
+            methodLogger.error(`Failed to get file content: ${response.status} ${errorMessage}`);
+            throw new Error(`Failed to get file content: ${response.status} ${errorMessage}`);
+        }
+
+		const content = await response.text();
+		methodLogger.debug(`Retrieved file content for ${filePath} (length: ${content.length})`);
+		return content;
 	}
 
 	/**
@@ -141,18 +152,26 @@ export class AtlassianRepositoriesService {
 	async listBranches(
 		projectKey: string,
 		repoSlug: string,
-		params: { limit?: number; start?: number; filterText?: string } = {}
-	): Promise<any> {
+		params: { limit?: number; start?: number; filterText?: string; orderBy?: GetBranchesOrderByEnum; } = {}
+	): Promise<GetBranches200Response> {
 		if (!projectKey || !repoSlug) {
 			throw new Error('projectKey and repoSlug parameters are required');
 		}
 		const methodLogger = this.logger.forMethod('listBranches');
 		methodLogger.debug(`Listing branches for repo: ${repoSlug}, project: ${projectKey}, params:`, params);
-		const response = await this.client.get<any>(
-			`${AtlassianRepositoriesService.API_PATH}/projects/${projectKey}/repos/${repoSlug}/branches`,
-			{ params }
-		);
-		methodLogger.debug(`Found ${response.size} branches total.`);
+
+		const request: GetBranchesRequest = {
+			projectKey: projectKey,
+			repositorySlug: repoSlug,
+			limit: params.limit,
+			start: params.start,
+			filterText: params.filterText,
+			orderBy: params.orderBy,
+		};
+
+		const response = await this.repositoryApi.getBranches(request);
+
+		methodLogger.debug(`Found ${response.size ?? 'unknown'} branches total.`);
 		return response;
 	}
 
@@ -160,20 +179,25 @@ export class AtlassianRepositoriesService {
      * Gets the default branch for a repository.
      * @param projectKey The key of the project.
      * @param repoSlug The slug of the repository.
-     * @returns A promise resolving to the default branch object.
+     * @returns A promise resolving to the default branch object (minimal ref).
      */
 	async getDefaultBranch(
 		projectKey: string,
 		repoSlug: string
-	): Promise<any> {
+	): Promise<RestMinimalRef> {
 		if (!projectKey || !repoSlug) {
 			throw new Error('projectKey and repoSlug parameters are required');
 		}
 		const methodLogger = this.logger.forMethod('getDefaultBranch');
 		methodLogger.debug(`Getting default branch for repo: ${repoSlug}, project: ${projectKey}`);
-		const response = await this.client.get<any>(
-			`${AtlassianRepositoriesService.API_PATH}/projects/${projectKey}/repos/${repoSlug}/branches/default`
-		);
+		
+		const request: GetDefaultBranch2Request = {
+			projectKey: projectKey,
+			repositorySlug: repoSlug
+		};
+
+		const response = await this.projectApi.getDefaultBranch2(request);
+
 		methodLogger.debug(`Default branch: ${response.displayId}`);
 		return response;
 	}
@@ -188,17 +212,25 @@ export class AtlassianRepositoriesService {
 	async listCommits(
 		projectKey: string,
 		repoSlug: string,
-		params: { limit?: number; start?: number; until?: string; path?: string; author?: string } = {}
-	): Promise<any> {
+		params: { limit?: number; start?: number; until?: string; path?: string; } = {}
+	): Promise<GetCommits200Response> {
 		if (!projectKey || !repoSlug) {
 			throw new Error('projectKey and repoSlug parameters are required');
 		}
 		const methodLogger = this.logger.forMethod('listCommits');
 		methodLogger.debug(`Listing commits for repo: ${repoSlug}, project: ${projectKey}, params:`, params);
-		const response = await this.client.get<any>(
-			`${AtlassianRepositoriesService.API_PATH}/projects/${projectKey}/repos/${repoSlug}/commits`,
-			{ params }
-		);
+
+		const request: GetCommitsRequest = {
+			projectKey: projectKey,
+			repositorySlug: repoSlug,
+			limit: params.limit,
+			start: params.start,
+			until: params.until,
+			path: params.path,
+		};
+
+		const response = await this.repositoryApi.getCommits(request);
+
 		methodLogger.debug(`Found ${response.size} commits total.`);
 		return response;
 	}
@@ -214,15 +246,21 @@ export class AtlassianRepositoriesService {
 		projectKey: string,
 		repoSlug: string,
 		commitId: string
-	): Promise<any> {
+	): Promise<RestCommit> {
 		if (!projectKey || !repoSlug || !commitId) {
 			throw new Error('projectKey, repoSlug, and commitId parameters are required');
 		}
 		const methodLogger = this.logger.forMethod('getCommit');
 		methodLogger.debug(`Getting commit ${commitId} for repo: ${repoSlug}, project: ${projectKey}`);
-		const response = await this.client.get<any>(
-			`${AtlassianRepositoriesService.API_PATH}/projects/${projectKey}/repos/${repoSlug}/commits/${commitId}`
-		);
+		
+		const request: GetCommitRequest = {
+			projectKey: projectKey,
+			repositorySlug: repoSlug,
+			commitId: commitId
+		};
+
+		const response = await this.repositoryApi.getCommit(request);
+
 		methodLogger.debug(`Retrieved commit: ${response.id}`);
 		return response;
 	}
@@ -232,29 +270,32 @@ export class AtlassianRepositoriesService {
      * Lists files/directories in a repository at a given ref and path.
      * @param projectKey The key of the project.
      * @param repoSlug The slug of the repository.
-     * @param options Optional: at (branch/tag/commit), path (subdirectory), limit, start.
+     * @param params Optional: at (branch/tag/commit), path (subdirectory), limit, start.
      * @returns A promise resolving to the list of files/directories.
      */
 	async listFiles(
 		projectKey: string,
 		repoSlug: string,
-		options: { at?: string; path?: string; limit?: number; start?: number } = {}
-	): Promise<any> {
+		params: { at?: string; path?: string; limit?: number; start?: number; } = {}
+	): Promise<StreamFiles200Response> {
 		if (!projectKey || !repoSlug) {
 			throw new Error('projectKey and repoSlug parameters are required');
 		}
 		const methodLogger = this.logger.forMethod('listFiles');
-		methodLogger.debug(`Listing files for repo: ${repoSlug}, project: ${projectKey}, options:`, options);
-		const params: Record<string, any> = {};
-		if (options.at) params.at = options.at;
-		if (options.path) params.path = options.path;
-		if (options.limit) params.limit = options.limit;
-		if (options.start) params.start = options.start;
-		const response = await this.client.get<any>(
-			`${AtlassianRepositoriesService.API_PATH}/projects/${projectKey}/repos/${repoSlug}/files`,
-			{ params }
-		);
-		methodLogger.debug(`Found ${response.values?.length ?? 0} files/directories.`);
+		methodLogger.debug(`Listing files for repo: ${repoSlug}, project: ${projectKey}, params:`, params);
+
+		const request: StreamFiles1Request = {
+			projectKey: projectKey,
+			repositorySlug: repoSlug,
+			at: params.at,
+			path: params.path ?? '',
+			limit: params.limit,
+			start: params.start
+		};
+
+		const response = await this.repositoryApi.streamFiles1(request);
+		
+		methodLogger.debug(`Found ${response.size ?? 0} files/directories.`);
 		return response;
 	}
 

@@ -4,16 +4,14 @@ module.exports = {
 	testEnvironment: 'node',
 	testMatch: ['**/src/**/*.test.ts'],
 	transform: {
-		'^.+\\.tsx?$': 'ts-jest',
+		'^.+\\.tsx?$': ['ts-jest', { useESM: true }],
 	},
 	extensionsToTreatAsEsm: ['.ts'],
-	globals: {
-		'ts-jest': {
-			useESM: true,
-		},
-	},
 	moduleNameMapper: {
 		'^@src/(.*)$': '<rootDir>/src/$1',
 		'^@generated/(.*)$': '<rootDir>/src/generated/$1',
 	},
+	modulePathIgnorePatterns: [
+		'<rootDir>/dist/'
+	],
 };

@@ -2,10 +2,6 @@ import { Logger } from '../utils/logger.util';
 import { projectsService } from '../services/atlassianProjectsService';
 
 import { formatPagination } from '../utils/formatter.util';
-// Use a more specific type if available from the new service, or keep the generated one for now
-// Assuming the structure is compatible or we'll adapt the formatter
-
-import type { RestProject } from '../generated/models/RestProject';
 
 import { McpError, ErrorType } from '../utils/error.util';
 
@@ -29,18 +25,22 @@ class AtlassianProjectsController {
 		if (project.type) {
 			content += `**Type**: ${project.type}\n`;
 		}
-		if (typeof project.public === 'boolean') {
-			content += `**Public**: ${project.public ? 'Yes' : 'No'}\n`;
+		if (typeof project._public === 'boolean') {
+			content += `**Public**: ${project._public ? 'Yes' : 'No'}\n`;
 		}
 		content += '\n';
 
 		// Adjust links handling based on the new service's type
-		if (project.links?.self && Array.isArray(project.links.self) && project.links.self.length > 0) {
+		if ((project.links as any)?.self && Array.isArray((project.links as any).self) && (project.links as any).self.length > 0) {
 			content += '## Links\n\n';
 			// Assuming the first self link is the primary one
-			const selfLink = project.links.self[0].href;
-			if (selfLink) {
-				content += `- self: ${selfLink}\n`;
+			try {
+				const selfLink = (project.links as any).self[0].href;
+				if (selfLink) {
+					content += `- self: ${selfLink}\n`;
+				}
+			} catch (e) { // Belt and suspenders
+				controllerLogger.warn('Could not extract self link from project links', project.links);
 			}
 			// Add other links if needed and available in the type
 			content += '\n';
@@ -81,17 +81,21 @@ class AtlassianProjectsController {
 				if (project.type) {
 					content += `**Type**: ${project.type}\n`;
 				}
-				if (typeof project.public === 'boolean') {
-					content += `**Public**: ${project.public ? 'Yes' : 'No'}\n`;
+				if (typeof project._public === 'boolean') {
+					content += `**Public**: ${project._public ? 'Yes' : 'No'}\n`;
 				}
 				content += '\n';
 
 				// Adjust links handling in list view
-				if (project.links?.self && Array.isArray(project.links.self) && project.links.self.length > 0) {
+				if ((project.links as any)?.self && Array.isArray((project.links as any).self) && (project.links as any).self.length > 0) {
 					content += '### Links\n\n';
-					const selfLink = project.links.self[0].href;
-					if (selfLink) {
-						content += `- self: ${selfLink}\n`;
+					try {
+						const selfLink = (project.links as any).self[0].href;
+						if (selfLink) {
+							content += `- self: ${selfLink}\n`;
+						}
+					} catch (e) { // Belt and suspenders
+						controllerLogger.warn('Could not extract self link from project links', project.links);
 					}
 					content += '\n';
 				}
@@ -130,67 +134,6 @@ class AtlassianProjectsController {
 			methodLogger.error(`Failed to get project ${projectKey}:`, error);
 			// Add status code and original error to McpError
 			throw new McpError(`Failed to get project ${projectKey}`, ErrorType.API_ERROR, 500, error as Error);
-		}
-	}
-
-	/**
-     * Create a new project
-     */
-	// Method name remains 'create' as used by the CLI
-	async create(project: RestProject) {
-		const methodLogger = controllerLogger.forMethod('create');
-		methodLogger.debug('Creating new project:', project);
-
-		try {
-			// Keep using the same method name (stubbed in the new service)
-			const createdProject = await projectsService.create(project);
-			const content = this.formatProjectDetails(createdProject, `Project Created: ${createdProject.name}`);
-			return { content };
-		} catch (error) {
-			methodLogger.error('Failed to create project:', error);
-			// Add status code and original error to McpError
-			throw new McpError('Failed to create project', ErrorType.API_ERROR, 500, error as Error);
-		}
-	}
-
-	/**
-     * Update an existing project
-     */
-	// Method name remains 'update' as used by the CLI
-	async update({ projectKey, project }: { projectKey: string; project: RestProject }) {
-		const methodLogger = controllerLogger.forMethod('update');
-		methodLogger.debug(`Updating project ${projectKey}:`, project);
-
-		try {
-			// Keep using the same method name (stubbed in the new service)
-			const updatedProject = await projectsService.update(projectKey, project);
-			const content = this.formatProjectDetails(updatedProject, `Project Updated: ${updatedProject.name}`);
-			return { content };
-		} catch (error) {
-			methodLogger.error(`Failed to update project ${projectKey}:`, error);
-			// Add status code and original error to McpError
-			throw new McpError(`Failed to update project ${projectKey}`, ErrorType.API_ERROR, 500, error as Error);
-		}
-	}
-
-	/**
-     * Delete a project
-     */
-	// Method name remains 'delete' as used by the CLI
-	async delete({ projectKey }: { projectKey: string }) {
-		const methodLogger = controllerLogger.forMethod('delete');
-		methodLogger.debug(`Deleting project: ${projectKey}`);
-
-		try {
-			// Keep using the same method name (stubbed in the new service)
-			await projectsService.delete(projectKey);
-			return {
-				content: `✅ Project \`${projectKey}\` has been deleted successfully.`
-			};
-		} catch (error) {
-			methodLogger.error(`Failed to delete project ${projectKey}:`, error);
-			// Add status code and original error to McpError
-			throw new McpError(`Failed to delete project ${projectKey}`, ErrorType.API_ERROR, 500, error as Error);
 		}
 	}
 }

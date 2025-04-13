@@ -9,10 +9,16 @@
     "mcp-atlassian-bitbucket": "./dist/src/index.js"
   },
   "scripts": {
-    "generate": "npx @openapitools/openapi-generator-cli generate -i openapi/bitbucket.pyfiltered.subset.openapi.v3.json -g typescript-fetch -o src/generated --config openapi/openapi-generator-config.json",
+    "filter-spec": "python openapi/filter_openapi.py",
+    "generate": "npx @openapitools/openapi-generator-cli generate -i openapi/bitbucket.downloaded.${BITBUCKET_VERSION:-8.19}.openapi.v3.json -g typescript-axios -o src/generated --config openapi/openapi-generator-config.json",
     "build": "tsc",
-    "test": "jest",
     "lint": "eslint . --ext .ts",
+    "test": "jest",
+    "clean": "rm -rf dist src/generated",
+    "update-spec": "npm run filter-spec --",
+    "build-app": "npm run generate && npm run lint && npm run build",
+    "rebuild-app": "npm run clean && npm run build-app",
+    "regenerate-and-build": "echo \"Specify version via BITBUCKET_VERSION env var\" && npm run clean && npm run generate && npm run lint && npm run build",
     "semantic-release": "semantic-release",
     "start": "npm run build && node dist/src/index.js"
   },

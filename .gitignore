@@ -66,3 +66,7 @@ scripts/**/*.d.ts
 .env
 .env.*
 !.env.example
+
+# Exclude filtered OpenAPI specifications
+# openapi/bitbucket.pyfiltered.*.openapi.v3.json
+openapi/bitbucket.downloaded.*.openapi.v3.json

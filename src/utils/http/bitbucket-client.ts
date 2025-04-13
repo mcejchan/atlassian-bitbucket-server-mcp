@@ -1,22 +1,20 @@
 import axios, { 
 	AxiosInstance, 
-	InternalAxiosRequestConfig,
 	AxiosRequestConfig,
-	RawAxiosRequestHeaders
+	RawAxiosRequestHeaders,
 } from 'axios';
 import { Logger } from '../logger.util';
 import { config } from '../config.util';
-import { McpError, ErrorType } from '../error.util';
+// Import ConfigurationParameters and Configuration types
+import { Configuration } from '@generated/runtime';
+// Import interceptor functions
+import { addAuthHeader, handleAuthError } from './interceptors/auth.interceptor';
+import { logRequest, logRequestError, logResponse, logResponseError } from './interceptors/logging.interceptor';
+import { handleErrorResponse } from './interceptors/error.interceptor';
+
+type FetchAPI = (input: RequestInfo | URL, init?: RequestInit | undefined) => Promise<Response>;
 
 const clientLogger = Logger.forContext('BitbucketClient');
-
-// Extend InternalAxiosRequestConfig to include bitbucket config
-interface BitbucketRequestConfig extends InternalAxiosRequestConfig {
-	bitbucket?: {
-		username?: string;
-		password?: string;
-	};
-}
 
 /**
  * Create an Axios instance for Bitbucket API calls with proper authentication
@@ -25,6 +23,7 @@ export class BitbucketClient {
 	private readonly client: AxiosInstance;
 	private readonly logger: Logger;
 	private static instance: BitbucketClient;
+	private basePath: string = '';
 
 	private constructor() {
 		this.logger = Logger.forContext('utils/http/bitbucket-client.ts');
@@ -55,136 +54,26 @@ export class BitbucketClient {
 			);
 		}
 
+		// Ensure baseURL doesn't end with a slash
+		const sanitizedBaseUrl = serverUrl.replace(/\/+$/, '');
+		methodLogger.debug(`Using sanitized base URL: ${sanitizedBaseUrl}`);
+		this.basePath = sanitizedBaseUrl; // Store the base path
+
 		const client = axios.create({
-			baseURL: serverUrl,
+			baseURL: this.basePath, // Use stored base path
 			headers: {
 				'Content-Type': 'application/json',
 			} as RawAxiosRequestHeaders,
 		});
 
-		// Add interceptors
-		this.addAuthInterceptor(client);
-		this.addLoggingInterceptor(client);
-		this.addErrorInterceptor(client);
+		// Add interceptors using imported functions
+		client.interceptors.request.use(addAuthHeader, handleAuthError);
+		client.interceptors.request.use(logRequest, logRequestError);
+		client.interceptors.response.use(logResponse, logResponseError);
+		client.interceptors.response.use(undefined, handleErrorResponse); // Error handler for response
 
-		methodLogger.debug('Bitbucket HTTP client created');
+		methodLogger.debug('Bitbucket HTTP client created with external interceptors');
 		return client;
-	}
-
-	private addAuthInterceptor(client: AxiosInstance): void {
-		client.interceptors.request.use(
-			(requestConfig: BitbucketRequestConfig) => {
-				const methodLogger = this.logger.forMethod('authInterceptor');
-				
-				// --- Bearer Token Auth (Priority 1) ---
-				const token = config.get('ATLASSIAN_BITBUCKET_ACCESS_TOKEN');
-				if (token) {
-					if (requestConfig.headers) {
-						requestConfig.headers.Authorization = `Bearer ${token}`;
-						methodLogger.debug('Added Bearer token authorization header.');
-					}
-					return requestConfig; // Use token auth and proceed
-				}
-
-				// --- Basic Auth (Fallback - Priority 2) ---
-				methodLogger.debug('Bearer token not found, attempting Basic auth.');
-				// Allow overriding credentials per-request if needed (though unlikely for Bitbucket)
-				const username = requestConfig.bitbucket?.username || config.get('ATLASSIAN_BITBUCKET_USERNAME');
-				const password = requestConfig.bitbucket?.password || config.get('ATLASSIAN_BITBUCKET_PASSWORD');
-
-				if (username && password) {
-					const auth = Buffer.from(`${username}:${password}`).toString('base64');
-					if (requestConfig.headers) {
-						requestConfig.headers.Authorization = `Basic ${auth}`;
-						methodLogger.debug('Added Basic auth header using username/password.');
-					}
-				} else {
-					// --- No Credentials ---
-					methodLogger.warn('No suitable authentication credentials (Bearer token or Basic auth username/password) were found in config.');
-					// Depending on API, some calls might work without auth, so we don't error here.
-					// Error handling for 401/403 should happen in the response interceptor.
-				}
-
-				return requestConfig;
-			},
-			(error) => {
-				this.logger.error('Auth interceptor error:', error);
-				return Promise.reject(error);
-			},
-		);
-	}
-
-	private addLoggingInterceptor(client: AxiosInstance): void {
-		client.interceptors.request.use(
-			(config: BitbucketRequestConfig) => {
-				const methodLogger = this.logger.forMethod('loggingInterceptor');
-				methodLogger.debug(`${config.method?.toUpperCase()} ${config.url}`);
-				return config;
-			},
-			(error) => {
-				this.logger.error('Request error:', error);
-				return Promise.reject(error);
-			},
-		);
-
-		client.interceptors.response.use(
-			(response) => {
-				const methodLogger = this.logger.forMethod('loggingInterceptor');
-				methodLogger.debug(
-					`${response.status} ${response.config.method?.toUpperCase()} ${
-						response.config.url
-					}`,
-				);
-				return response;
-			},
-			(error) => {
-				this.logger.error('Response error:', error);
-				return Promise.reject(error);
-			},
-		);
-	}
-
-	private addErrorInterceptor(client: AxiosInstance): void {
-		client.interceptors.response.use(
-			(response) => response,
-			(error) => {
-				const methodLogger = this.logger.forMethod('errorInterceptor');
-				methodLogger.error('API error:', error);
-
-				if (error.response) {
-					const status = error.response.status;
-					const message = error.response.data?.error?.message || error.message;
-
-					switch (status) {
-						case 401:
-							return Promise.reject(
-								new McpError(message, ErrorType.AUTH_INVALID, 401, error)
-							);
-						case 403:
-							return Promise.reject(
-								new McpError(message, ErrorType.FORBIDDEN, 403, error)
-							);
-						case 404:
-							return Promise.reject(
-								new McpError(message, ErrorType.NOT_FOUND, 404, error)
-							);
-						default:
-							return Promise.reject(
-								new McpError(message, ErrorType.API_ERROR, status || 500, error)
-							);
-					}
-				}
-
-				return Promise.reject(
-					new McpError(
-						'Network error occurred',
-						ErrorType.REQUEST_ERROR,
-						500,
-						error
-					),
-				);
-			},
-		);
 	}
 
 	public async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
@@ -209,5 +98,130 @@ export class BitbucketClient {
 
 	public async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
 		return (await this.client.delete<T>(url, config)).data;
+	}
+
+	// Public getter for the base path
+	public getBasePath(): string {
+		return this.basePath;
+	}
+
+	// New Public Method: Returns an instantiated Configuration object
+	public getGeneratedClientConfiguration(): Configuration {
+		return new Configuration({
+			// The generated client might still benefit from the base path for resolving relative URLs passed to its methods
+			// though the fetchApi implementation will ultimately use the Axios client's base URL.
+			basePath: this.getBasePath(), 
+			fetchApi: this.getFetchApi(),
+			// We don't pass headers here, as the fetchApi's underlying Axios client handles auth via interceptors.
+		});
+	}
+
+	// Method to provide a FetchAPI compatible function using the internal Axios client
+	public getFetchApi(): FetchAPI {
+		return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+			const methodLogger = this.logger.forMethod('getFetchApi');
+			let url: string;
+
+			// Determine URL from input
+			if (typeof input === 'string') {
+				url = input;
+			} else if (input instanceof URL) {
+				url = input.toString();
+			} else {
+				// Assuming input is a Request object
+				url = input.url;
+				// Merge headers and other properties from Request object if not in init
+				init = { ...input, ...init }; 
+			}
+
+			// Construct Axios config from fetch init
+			const axiosConfig: AxiosRequestConfig = {
+				url: url, // Axios uses url property within config
+				method: init?.method || 'GET',
+				headers: init?.headers ? this.convertHeadersToAxios(init.headers) : {},
+				data: init?.body,
+				// Map other relevant fetch options to Axios options if needed (e.g., signal)
+				// Use 'any' for pragmatic type casting between fetch and Axios signals
+				signal: init?.signal as any, 
+				responseType: 'arraybuffer' // Get raw response to construct Response object
+			};
+
+			try {
+				methodLogger.debug(`Executing request via Axios: ${axiosConfig.method} ${url}`);
+				const axiosResponse = await this.client.request(axiosConfig);
+
+				// Construct a standard Response object from the Axios response
+				const responseHeaders = new Headers();
+				for (const key in axiosResponse.headers) {
+					if (Object.prototype.hasOwnProperty.call(axiosResponse.headers, key)) {
+						// Handle potential array values for headers like set-cookie
+						const headerValue = axiosResponse.headers[key];
+						if (Array.isArray(headerValue)) {
+							headerValue.forEach(val => responseHeaders.append(key, String(val)));
+						} else {
+							responseHeaders.set(key, String(headerValue));
+						}
+					}
+				}
+
+				const response = new Response(axiosResponse.data, { // data is ArrayBuffer due to responseType
+					status: axiosResponse.status,
+					statusText: axiosResponse.statusText,
+					headers: responseHeaders,
+				});
+
+				return response;
+			} catch (error: any) {
+				methodLogger.error(`Error executing request via Axios for ${url}:`, error);
+				// Let the Axios error interceptor handle creating McpError.
+				// Just re-throw the original error to propagate it.
+				throw error; 
+			}
+		};
+	}
+
+	// Helper to convert Fetch Headers (HeadersInit) to Axios Headers (RawAxiosRequestHeaders)
+	private convertHeadersToAxios(fetchHeaders: HeadersInit): RawAxiosRequestHeaders {
+		const axiosHeaders: RawAxiosRequestHeaders = {};
+		if (fetchHeaders instanceof Headers) {
+			// Correctly iterate over Headers object using forEach
+			fetchHeaders.forEach((value, key) => {
+				// Axios headers can handle string | number | boolean | string[]
+				// Check if header already exists (e.g., multiple Set-Cookie)
+				if (axiosHeaders[key]) {
+					const existing = axiosHeaders[key];
+					if (Array.isArray(existing)) {
+						(existing as string[]).push(value); // Push to existing array
+					} else {
+						// Convert to array if it's the second value for this key
+						axiosHeaders[key] = [String(existing), value];
+					}
+				} else {
+					axiosHeaders[key] = value; // Assign first value
+				}
+			});
+		} else if (Array.isArray(fetchHeaders)) {
+			// Handle string[][]
+			fetchHeaders.forEach(([key, value]) => {
+				if (axiosHeaders[key]) {
+					// Append if header already exists and is an array, otherwise create array
+					const existing = axiosHeaders[key];
+					if (Array.isArray(existing)) {
+						existing.push(value);
+					} else if (typeof existing === 'string'){
+						axiosHeaders[key] = [existing, value];
+					} else {
+						// Handle cases where existing value might be number/boolean (though unlikely for headers)
+						axiosHeaders[key] = [String(existing), value]; 
+					}
+				} else {
+					axiosHeaders[key] = value;
+				}
+			});
+		} else {
+			// Assuming it's Record<string, string | ReadonlyArray<string>> - Axios can handle arrays
+			Object.assign(axiosHeaders, fetchHeaders);
+		}
+		return axiosHeaders;
 	}
 }

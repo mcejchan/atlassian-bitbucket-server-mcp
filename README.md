@@ -1,6 +1,6 @@
 # Atlassian Bitbucket MCP Server
 
-A Model Context Protocol (MCP) server for Atlassian Bitbucket integration.  
+A Model Context Protocol (MCP) server for Atlassian Bitbucket Server/Data Center integration.  
 Supports CLI, STDIO, SSE/HTTP, and Dockerized deployments.  
 Compatible with Dive AI, MCP Inspector, and other MCP clients.
 
@@ -9,6 +9,7 @@ Compatible with Dive AI, MCP Inspector, and other MCP clients.
 ## Features
 
 - **Bitbucket Server/Datacenter Integration**: Exposes Bitbucket projects, repositories, branches, commits, and file content as MCP tools.
+- **OpenAPI-Generated Client**: Utilizes code generated from the official Bitbucket Server OpenAPI specification for type safety and API accuracy.
 - **MCP Protocol Support**: Works as a standalone MCP server (STDIO/SSE/HTTP) or as a CLI tool.
 - **Docker Support**: Easily build and run as a Docker container for consistent environments.
 - **Configurable**: Uses environment variables for Bitbucket server URL and access token.
@@ -20,9 +21,10 @@ Compatible with Dive AI, MCP Inspector, and other MCP clients.
 
 ### 1. Prerequisites
 
-- Node.js (v18+ recommended)
+- Node.js (v20+ recommended)
 - npm
-- Bitbucket Server/Datacenter instance and a valid access token
+- Python 3 (for OpenAPI filtering script)
+- Bitbucket Server/Datacenter instance and a valid access token with appropriate permissions.
 
 ### 2. Clone and Install
 
@@ -32,11 +34,15 @@ cd mcp-server-selfhosted-bitbucket
 npm install
 ```
 
-### 3. Build
+### 3. Build the Application
+
+This command generates the API client from the OpenAPI spec (using the default version specified in `package.json`), lints the code, and compiles the TypeScript:
 
 ```bash
-npm run build
+npm run build-app
 ```
+
+*(See the Development section for details on updating the OpenAPI spec version.)*
 
 ### 4. Run (STDIO/SSE/CLI)
 
@@ -61,10 +67,7 @@ Server will listen on port 3000 by default.
 #### As CLI
 
 ```bash
-npm run cli -- help
-```
-or
-```bash
+# After running npm run build-app
 node dist/src/index.js help
 ```
 
@@ -75,6 +78,7 @@ node dist/src/index.js help
 ### Build the Docker Image
 
 ```bash
+# Build the image, which runs npm run build-app inside
 docker build -t bitbucket-mcp-server:latest .
 ```
 
@@ -120,12 +124,71 @@ docker run --rm -i \
 
 ---
 
-## Project Structure
+## Development
 
-- `src/` - TypeScript source code
-- `dist/` - Compiled JavaScript output
-- `Dockerfile` - Docker build instructions
-- `package.json` - Project manifest
+### Project Structure
+
+- `src/` - Manually written TypeScript source code.
+- `src/generated/` - **Automatically generated** API client code (do not edit directly).
+- `openapi/` - Contains the OpenAPI specification filtering script and related files.
+- `dist/` - Compiled JavaScript output.
+- `Dockerfile` - Docker build instructions.
+- `package.json` - Project manifest.
+- `tsconfig.json` - TypeScript configuration for the main project.
+- `eslint.config.mjs` - ESLint configuration.
+
+### Updating the API Client (OpenAPI Spec)
+
+The API client code in `src/generated/` is created from the official Bitbucket Server/DC OpenAPI specification using `openapi-generator-cli`.
+
+1.  **Choose Version:** Decide which Bitbucket version you want to target (e.g., `9.6`, `8.19`).
+2.  **Download & Filter:** Run the Python script to download the specific version, filter it for relevant parts, and fix potential generator issues (like duplicate operation IDs). Replace `<version>` with the desired version number:
+    ```bash
+    npm run update-spec -- <version>
+    # Example: npm run update-spec -- 9.6
+    ```
+    This creates `openapi/bitbucket.pyfiltered.subset.<version>.openapi.v3.json`.
+3.  **Generate Code:** Run the generator, telling it which version's filtered spec to use via the `BITBUCKET_VERSION` environment variable:
+    ```bash
+    BITBUCKET_VERSION=<version> npm run generate
+    # Example: BITBUCKET_VERSION=9.6 npm run generate
+    ```
+    *(If `BITBUCKET_VERSION` is not set, it defaults to the version specified in the `generate` script in `package.json`.)*
+
+### Build, Lint, Test
+
+- **Full Build (Generate, Lint, Compile):**
+  ```bash
+  # Uses BITBUCKET_VERSION env var or default for generate step
+  npm run build-app
+  ```
+- **Clean Rebuild:**
+  ```bash
+  npm run rebuild-app
+  ```
+- **Run Linters:**
+  ```bash
+  npm run lint
+  # Or to auto-fix:
+  npm run lint -- --fix
+  ```
+- **Run Tests:**
+  ```bash
+  npm run test
+  ```
+- **Clean Output:**
+  ```bash
+  npm run clean
+  ```
+
+### Simulating CI Locally
+
+To catch issues before pushing, run the core CI steps after a clean install:
+
+```bash
+rm -rf node_modules && npm ci && npm run generate && npm run lint && npm run build && npm run test
+```
+*(Remember to set `BITBUCKET_VERSION` if needed for the `generate` step in this chain.)*
 
 ---
 
@@ -143,19 +206,15 @@ docker run --rm -i \
 
 - Use STDIO transport and let Inspector launch the server, or run in SSE/HTTP mode and connect via URL.
 
+### Build Errors
+
+- Ensure the Python script (`openapi/filter_openapi.py`) ran successfully for the target `BITBUCKET_VERSION` before running `npm run generate`.
+- If `tsc` fails, check errors. Issues in `src/generated/` often require fixes in the Python script or the OpenAPI spec itself.
+
 ### Docker
 
 - Ensure the entry point is `dist/src/index.js` and is executable.
 - If you see permission errors, check the Dockerfile's `chmod` step.
-
----
-
-## Development
-
-- TypeScript code in `src/`
-- Tests in `src/utils/*.test.ts` and `src/services/*.test.ts`
-- Build with `npm run build`
-- Run tests with `npm test`
 
 ---
 

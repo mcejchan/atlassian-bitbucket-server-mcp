@@ -1,40 +1,48 @@
-import { AxiosHeaders, InternalAxiosRequestConfig } from 'axios';
-import { McpError, ErrorType } from '../../error.util.js';
+import { InternalAxiosRequestConfig } from 'axios';
+import { Logger } from '../../logger.util';
+import { config } from '../../config.util';
 
-export class AuthInterceptor {
-	onRequest(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {
-		const token = process.env.ATLASSIAN_BITBUCKET_ACCESS_TOKEN;
-		const username = process.env.ATLASSIAN_BITBUCKET_USERNAME;
-		const appPassword = process.env.ATLASSIAN_BITBUCKET_APP_PASSWORD;
+const logger = Logger.forContext('utils/http/interceptors/auth.interceptor');
 
-		if (!token && (!username || !appPassword)) {
-			throw new McpError(
-				'Bitbucket authentication credentials are required',
-				ErrorType.AUTH_MISSING,
-				401
-			);
+/**
+ * Request interceptor handler to add Authorization header.
+ */
+export const addAuthHeader = (requestConfig: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
+	const methodLogger = logger.forMethod('addAuthHeader');
+
+	// --- Bearer Token Auth (Priority 1) ---
+	const token = config.get('ATLASSIAN_BITBUCKET_ACCESS_TOKEN');
+	if (token) {
+		if (requestConfig.headers) {
+			requestConfig.headers.Authorization = `Bearer ${token}`;
+			methodLogger.debug('Added Bearer token authorization header.');
 		}
-
-		if (!config.headers) {
-			config.headers = new AxiosHeaders();
-		}
-
-		if (token) {
-			config.headers.Authorization = `Bearer ${token}`;
-		} else if (username && appPassword) {
-			const auth = Buffer.from(`${username}:${appPassword}`).toString('base64');
-			config.headers.Authorization = `Basic ${auth}`;
-		}
-
-		return config;
+		return requestConfig; // Use token auth and proceed
 	}
 
-	onError(error: unknown): never {
-		throw new McpError(
-			'Authentication failed',
-			ErrorType.AUTH_ERROR,
-			401,
-			error instanceof Error ? error : undefined
-		);
+	// --- Basic Auth (Fallback - Priority 2) ---
+	methodLogger.debug('Bearer token not found, attempting Basic auth.');
+	const username = config.get('ATLASSIAN_BITBUCKET_USERNAME');
+	const password = config.get('ATLASSIAN_BITBUCKET_PASSWORD');
+
+	if (username && password) {
+		const auth = Buffer.from(`${username}:${password}`).toString('base64');
+		if (requestConfig.headers) {
+			requestConfig.headers.Authorization = `Basic ${auth}`;
+			methodLogger.debug('Added Basic auth header using username/password.');
+		}
+	} else {
+		// --- No Credentials ---
+		methodLogger.warn('No suitable authentication credentials (Bearer token or Basic auth username/password) were found in config.');
 	}
-} 
+
+	return requestConfig;
+};
+
+/**
+ * Request interceptor error handler (optional, simple rethrow for now).
+ */
+export const handleAuthError = (error: any): Promise<never> => {
+	logger.error('Auth interceptor error:', error);
+	return Promise.reject(error);
+}; 

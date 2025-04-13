@@ -11,23 +11,6 @@ import { Logger } from './logger.util';
 // Create a file-level logger for the module
 const markdownLogger = Logger.forContext('utils/markdown.util.ts');
 
-// DOM type definitions
-interface HTMLElement {
-	nodeName: string;
-	parentNode?: Node;
-	childNodes: NodeListOf<Node>;
-}
-
-interface Node {
-	tagName?: string;
-	childNodes: NodeListOf<Node>;
-	parentNode?: Node;
-}
-
-interface NodeListOf<T> extends Array<T> {
-	length: number;
-}
-
 // Create a singleton instance of TurndownService with default options
 const turndownService = new TurndownService({
 	headingStyle: 'atx', // Use # style headings
@@ -41,11 +24,13 @@ const turndownService = new TurndownService({
 
 // Add custom rule for strikethrough
 turndownService.addRule('strikethrough', {
-	filter: (node: HTMLElement) => {
+	// Let TypeScript infer the node type, or use any if needed
+	filter: (node) => {
+		const nodeName = node.nodeName?.toLowerCase();
 		return (
-			node.nodeName.toLowerCase() === 'del' ||
-			node.nodeName.toLowerCase() === 's' ||
-			node.nodeName.toLowerCase() === 'strike'
+			nodeName === 'del' ||
+			nodeName === 's' ||
+			nodeName === 'strike'
 		);
 	},
 	replacement: (content: string): string => `~~${content}~~`,

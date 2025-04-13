@@ -1,50 +1,24 @@
-// src/services/atlassianProjectsService.ts
 import { BitbucketClient } from '../utils/http/bitbucket-client';
 import { Logger } from '../utils/logger.util';
-
-// Basic Types based on typical Bitbucket responses (Refine using OpenAPI spec if needed)
-interface Project {
-    key: string;
-    id: number;
-    name: string;
-    description?: string;
-    public?: boolean;
-    type?: string;
-    link?: { rel: string; href: string };
-    links?: { self: { href: string }[] };
-}
-
-interface PagedResponse<T> {
-    size: number;
-    limit: number;
-    isLastPage: boolean;
-    values: T[];
-    start?: number;
-    nextPageStart?: number;
-}
-
-type ProjectsResponse = PagedResponse<Project>;
-type ProjectDetailed = Project; // Assuming details are similar for now
-
-interface ListProjectsParams {
-    name?: string;
-    permission?: string;
-    limit?: number;
-    start?: number;
-}
+// Import generated API client and types
+import { ProjectApi, GetProjectsRequest } from '@generated/apis/ProjectApi';
+import type { RestProject, GetProjects200Response } from '@generated/models/index';
 
 /**
- * Service for interacting with Bitbucket Projects API (vLatest)
+ * Service for interacting with Bitbucket Projects API using generated client
  */
 export class AtlassianProjectsService {
-	private static readonly API_PATH = '/rest/api/latest'; // Use 'latest' as per spec
-	private readonly client: BitbucketClient;
 	private readonly logger: Logger;
 	private static instance: AtlassianProjectsService;
+	private readonly projectApi: ProjectApi;
 
 	private constructor() {
 		this.logger = Logger.forContext('services/atlassianProjectsService');
-		this.client = BitbucketClient.getInstance();
+
+		const apiConfig = BitbucketClient.getInstance().getGeneratedClientConfiguration();
+		this.projectApi = new ProjectApi(apiConfig);
+
+		this.logger.debug('Service initialized with generated ProjectApi client using config from BitbucketClient.');
 	}
 
 	/**
@@ -59,73 +33,57 @@ export class AtlassianProjectsService {
 
 	/**
      * Lists projects accessible to the authenticated user.
-     * @param params Optional query parameters (e.g., { limit: 50 })
+     * @param params Optional query parameters
      * @returns A promise resolving to the paged response of projects.
+     * @throws {McpError} If the API request fails
      */
-	async listProjects(params: ListProjectsParams = {}): Promise<ProjectsResponse> {
+	async listProjects(params: GetProjectsRequest = {}): Promise<GetProjects200Response> {
 		const methodLogger = this.logger.forMethod('listProjects');
 		methodLogger.debug('Listing projects with params:', params);
-		// Use the generic get method from BitbucketClient
-		const response = await this.client.get<ProjectsResponse>(
-			`${AtlassianProjectsService.API_PATH}/projects`,
-			{ params } // Axios automatically handles query params
-		);
-		methodLogger.debug(`Found ${response.size} projects total.`);
-		return response;
+
+		try {
+			// Pass the params object directly as the request
+			const response = await this.projectApi.getProjects(params);
+
+			methodLogger.info(`Successfully listed ${response.values?.length ?? 0} projects`);
+			methodLogger.debug('Projects response:', {
+				size: response.size,
+				isLastPage: response.isLastPage,
+				nextPageStart: response.nextPageStart
+			});
+
+			return response;
+		} catch (error) {
+			methodLogger.error('Error listing projects:', error);
+			throw error;
+		}
 	}
 
 	/**
      * Gets detailed information for a specific project.
      * @param projectKey The key of the project.
      * @returns A promise resolving to the detailed project information.
+     * @throws {McpError} If the API request fails or project is not found
      */
-	async getProject(projectKey: string): Promise<ProjectDetailed> {
-		if (!projectKey) {
-			throw new Error('projectKey parameter is required');
-		}
+	async getProject(projectKey: string): Promise<RestProject> {
 		const methodLogger = this.logger.forMethod('getProject');
-		methodLogger.debug(`Getting project with key: ${projectKey}`);
-		const response = await this.client.get<ProjectDetailed>(
-			`${AtlassianProjectsService.API_PATH}/projects/${projectKey}`
-		);
-		methodLogger.debug(`Retrieved details for project: ${response.name}`);
-		return response;
-	}
 
-	// --- Stub Methods (Not Yet Implemented) ---
+		try {
+			methodLogger.debug(`Getting project with key: ${projectKey}`);
+			const response = await this.projectApi.getProject({ projectKey: projectKey });
 
-	/**
-     * Creates a new project. (NOT IMPLEMENTED)
-     * @param _project Project creation payload (currently unused).
-     * @returns A promise resolving to the created project details.
-     */
-	async create(_project: Partial<Project>): Promise<ProjectDetailed> {
-		this.logger.forMethod('create').warn('Create project functionality is not yet implemented in this service.');
-		throw new Error('Create project not implemented');
-		// TODO: Implement using POST /rest/api/latest/projects based on OpenAPI spec
-	}
+			methodLogger.info(`Successfully retrieved project: ${response.name} (${response.key})`);
+			methodLogger.debug('Project details:', {
+				id: response.id,
+				type: response.type,
+				public: response._public // Keep using _public here based on model
+			});
 
-	/**
-     * Updates an existing project. (NOT IMPLEMENTED)
-     * @param projectKey The key of the project to update.
-     * @param _project Project update payload (currently unused).
-     * @returns A promise resolving to the updated project details.
-     */
-	async update(projectKey: string, _project: Partial<Project>): Promise<ProjectDetailed> {
-		this.logger.forMethod('update').warn(`Update project functionality is not yet implemented for project: ${projectKey}`);
-		throw new Error('Update project not implemented');
-		// TODO: Implement using PUT /rest/api/latest/projects/{projectKey} based on OpenAPI spec
-	}
-
-	/**
-     * Deletes a project. (NOT IMPLEMENTED)
-     * @param projectKey The key of the project to delete.
-     * @returns A promise that resolves when deletion is complete (or errors).
-     */
-	async delete(projectKey: string): Promise<void> {
-		this.logger.forMethod('delete').warn(`Delete project functionality is not yet implemented for project: ${projectKey}`);
-		throw new Error('Delete project not implemented');
-		// TODO: Implement using DELETE /rest/api/latest/projects/{projectKey} based on OpenAPI spec
+			return response;
+		} catch (error) {
+			methodLogger.error(`Error getting project ${projectKey}:`, error);
+			throw error;
+		}
 	}
 }
 

@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { projectsService } from '../services/atlassianProjectsService';
 import { repositoriesService } from '../services/atlassianRepositoriesService';
 import { formatErrorForMcpTool, createValidationError } from '../utils/error.util.js';
-import { Logger } from '../utils/logger.util.js';
+import { Logger } from '../utils/logger.util';
+import { RestProject, RestRepository, RestBranch, RestMinimalRef } from '../generated';
 
 const toolLogger = Logger.forContext('tools/atlassianTools.ts');
 
@@ -12,13 +13,13 @@ const toolLogger = Logger.forContext('tools/atlassianTools.ts');
  * @param server The McpServer instance.
  */
 export function registerAtlassianTools(server: McpServer) {
-	const registerLogger = toolLogger.forMethod('registerAtlassianTools');
+	const registerLogger = Logger.forContext('registerAtlassianTools');
 	registerLogger.debug('Registering Bitbucket tools...');
 
 	// --- List Projects Tool ---
 	server.tool(
 		'bitbucket_list_projects', // Tool name
-		{ 
+		{
 			name: z.string().optional().describe("Filter projects by name containing this value."),
 			permission: z.string().optional().describe("Filter projects by permission level (e.g., PROJECT_READ, PROJECT_ADMIN). Case-insensitive."),
 			limit: z.number().int().positive().optional().default(25).describe("Maximum number of projects to return per page."),
@@ -50,21 +51,21 @@ export function registerAtlassianTools(server: McpServer) {
 				// Format the result for MCP (assuming result structure)
 				// TODO: Enhance formatting based on actual API response
 				const formattedContent = result.values && result.values.length > 0
-					? result.values.map(p => `- **${p.name}** (Key: ${p.key}) - ${p.description ?? 'No description'}`).join('\n')
+					? result.values.map((p: RestProject) => `- **${p.name}** (Key: ${p.key}) - ${p.description ?? 'No description'}`).join('\n')
 					: 'No projects found matching the criteria.';
 
-				const paginationInfo = result.isLastPage === false 
-					? `\n\n*More projects available. Next page starts at index: ${result.nextPageStart ?? 'N/A'}*` 
+				const paginationInfo = result.isLastPage === false
+					? `\n\n*More projects available. Next page starts at index: ${result.nextPageStart ?? 'N/A'}*`
 					: '';
 
 				// Return in the format expected by the SDK
 				return {
-					content: [{ 
-						type: 'text', 
+					content: [{
+						type: 'text',
 						text: `## Bitbucket Projects\n\n${formattedContent}${paginationInfo}`
 					}]
 				};
-			} catch (error) { 
+			} catch (error) {
 				handlerLogger.error('Error listing projects:', error);
 				return formatErrorForMcpTool(error); // Use ensureMcpError or a similar utility
 			}
@@ -90,23 +91,24 @@ export function registerAtlassianTools(server: McpServer) {
 			try {
 				const project = await projectsService.getProject(projectKey);
 				handlerLogger.info(`Successfully retrieved project: ${project.key}`);
-                
-				// Format the result using known fields from the service's Project type
-				const formattedContent = 
-`## Project: ${project.name} (Key: ${project.key})
 
-**ID:** ${project.id}
-**Description:** ${project.description || 'N/A'}
-**Public:** ${project.public !== undefined ? (project.public ? 'Yes' : 'No') : 'N/A'} 
-**Type:** ${project.type || 'N/A'}
-**Link:** ${project.links?.self?.[0]?.href || 'N/A'}
+				// Format the result using known fields from the service's Project type
+				const typedProject = project as RestProject; // Cast to generated type
+				const formattedContent =
+					`## Project: ${typedProject.name} (Key: ${typedProject.key})
+
+**ID:** ${typedProject.id}
+**Description:** ${typedProject.description || 'N/A'}
+**Public:** ${typedProject._public !== undefined ? (typedProject._public ? 'Yes' : 'No') : 'N/A'}
+**Type:** ${typedProject.type || 'N/A'}
+**Link:** ${(typedProject.links as any)?.['self']?.[0]?.href || 'N/A'}
 `;
 
 				// Return in the format expected by the SDK
 				return {
-					content: [{ 
-						type: 'text', 
-						text: formattedContent 
+					content: [{
+						type: 'text',
+						text: formattedContent
 					}]
 				};
 			} catch (error) {
@@ -178,26 +180,27 @@ export function registerAtlassianTools(server: McpServer) {
 			try {
 				const repo = await repositoriesService.getRepository(projectKey, repoSlug);
 				handlerLogger.info(`Successfully retrieved repository: ${repo.slug}`);
+				const typedRepo = repo as RestRepository; // Cast to generated type
 				const formattedContent =
-`## Repository: ${repo.name} (Slug: ${repo.slug})
+					`## Repository: ${typedRepo.name} (Slug: ${typedRepo.slug})
 
-**ID:** ${repo.id}
-**SCM:** ${repo.scmId}
-**State:** ${repo.state}
-**Status Message:** ${repo.statusMessage ?? 'N/A'}
-**Description:** ${repo.description ?? 'N/A'}
-**Archived:** ${repo.archived ? 'Yes' : 'No'}
-**Forkable:** ${repo.forkable ? 'Yes' : 'No'}
-**Default Branch:** ${repo.defaultBranch ?? 'N/A'}
-**Project:** ${repo.project?.name || 'N/A'} (Key: ${repo.project?.key || 'N/A'})
-**Project Description:** ${repo.project?.description ?? 'N/A'}
-**Public:** ${repo.public !== undefined ? (repo.public ? 'Yes' : 'No') : 'N/A'}
-**Scope:** ${repo.scope ?? 'N/A'}
-**Partition:** ${repo.partition ?? 'N/A'}
-**Link:** ${repo.links?.self?.[0]?.href || 'N/A'}
+					**ID:** ${typedRepo.id}
+					**SCM:** ${typedRepo.scmId}
+					**State:** ${typedRepo.state}
+					**Status Message:** ${typedRepo.statusMessage ?? 'N/A'}
+					**Description:** ${typedRepo.description ?? 'N/A'}
+					**Archived:** ${typedRepo.archived ? 'Yes' : 'No'}
+					**Forkable:** ${typedRepo.forkable ? 'Yes' : 'No'}
+					**Default Branch:** ${typedRepo.defaultBranch ?? 'N/A'}
+					**Project:** ${typedRepo.project?.name || 'N/A'} (Key: ${typedRepo.project?.key || 'N/A'})
+					**Project Description:** ${typedRepo.project?.description ?? 'N/A'}
+					**Public:** ${typedRepo._public !== undefined ? (typedRepo._public ? 'Yes' : 'No') : 'N/A'}
+					**Scope:** ${typedRepo.scope ?? 'N/A'}
+					**Partition:** ${typedRepo.partition ?? 'N/A'}
+					**Link:** ${(typedRepo.links as any)?.['self']?.[0]?.href || 'N/A'}
 
-${repo.origin ? `**Origin:** ${repo.origin.name} (Slug: ${repo.origin.slug})` : ''}
-`;
+					${typedRepo.origin ? `**Origin:** ${typedRepo.origin.name} (Slug: ${typedRepo.origin.slug})` : ''}
+				`;
 				return {
 					content: [{
 						type: 'text',
@@ -267,7 +270,9 @@ ${repo.origin ? `**Origin:** ${repo.origin.name} (Slug: ${repo.origin.slug})` : 
 				const result = await repositoriesService.listBranches(params.projectKey, params.repoSlug, options);
 				handlerLogger.info(`Successfully listed ${result.values?.length ?? 0} branches.`);
 				const formattedContent = result.values && result.values.length > 0
-					? result.values.map((b: any) => `- **${b.displayId}** (ID: ${b.id})${b.isDefault ? ' [default]' : ''}`).join('\n')
+					? result.values.map((b: RestMinimalRef) => {
+						return `- **Branch:** ${b.displayId ?? 'N/A'} (ID: ${b.id ?? 'N/A'})`;
+					}).join('\n')
 					: 'No branches found matching the criteria.';
 				const paginationInfo = result.isLastPage === false
 					? `\n\n*More branches available. Next page starts at index: ${result.nextPageStart ?? 'N/A'}*`
@@ -297,15 +302,13 @@ ${repo.origin ? `**Origin:** ${repo.origin.name} (Slug: ${repo.origin.slug})` : 
 			const handlerLogger = toolLogger.forMethod('bitbucket_get_default_branch');
 			handlerLogger.debug(`Getting default branch for ${projectKey}/${repoSlug}`);
 			try {
-				const branch = await repositoriesService.getDefaultBranch(projectKey, repoSlug);
+				const branch: RestMinimalRef = await repositoriesService.getDefaultBranch(projectKey, repoSlug);
 				handlerLogger.info(`Successfully retrieved default branch: ${branch.displayId}`);
 				const formattedContent =
-`## Default Branch
+					`## Default Branch
 
-**Name:** ${branch.displayId}
-**ID:** ${branch.id}
-**Latest Commit:** ${branch.latestCommit}
-**Is Default:** ${branch.isDefault ? 'Yes' : 'No'}
+**Name:** ${branch.displayId ?? 'N/A'}
+**ID:** ${branch.id ?? 'N/A'}
 `;
 				return {
 					content: [{
@@ -347,9 +350,18 @@ ${repo.origin ? `**Origin:** ${repo.origin.name} (Slug: ${repo.origin.slug})` : 
 				const result = await repositoriesService.listCommits(params.projectKey, params.repoSlug, options);
 				handlerLogger.info(`Successfully listed ${result.values?.length ?? 0} commits.`);
 				const formattedContent = result.values && result.values.length > 0
-					? result.values.map((c: any) =>
-						`- **${c.id.substring(0, 8)}** | ${c.author?.name ?? c.author?.displayName ?? 'Unknown'} | ${c.authorTimestamp ? new Date(c.authorTimestamp).toISOString() : 'N/A'}\n  > ${c.message?.split('\n')[0] ?? ''}`
-					).join('\n')
+					? result.values.map(c => {
+						const authorInfo = c.author ? `${c.author.name} <${c.author.emailAddress}>` : 'Unknown Author';
+						const committerInfo = c.committer ? `${c.committer.name} <${c.committer.emailAddress}>` : 'Unknown Committer';
+						return (
+							`- **Commit:** ${c.displayId} (ID: ${c.id ?? 'N/A'})
+  **Author:** ${authorInfo}
+  **Committer:** ${committerInfo}
+  **Date:** ${c.authorTimestamp ? new Date(c.authorTimestamp).toLocaleString() : 'N/A'}
+  **Message:** ${c.message ?? 'N/A'}
+  **Parents:** ${c.parents?.map(p => p.displayId).join(', ') || 'None'}`
+						);
+					}).join('\n\n')
 					: 'No commits found matching the criteria.';
 				const paginationInfo = result.isLastPage === false
 					? `\n\n*More commits available. Next page starts at index: ${result.nextPageStart ?? 'N/A'}*`
@@ -383,15 +395,12 @@ ${repo.origin ? `**Origin:** ${repo.origin.name} (Slug: ${repo.origin.slug})` : 
 				const c = await repositoriesService.getCommit(projectKey, repoSlug, commitId);
 				handlerLogger.info(`Successfully retrieved commit: ${c.id}`);
 				const formattedContent =
-`## Commit: ${c.id}
+					`## Commit: ${c.id}
 
-**Author:** ${c.author?.name ?? c.author?.displayName ?? 'Unknown'}
+**Author:** ${c.author?.name ?? 'Unknown'}
 **Date:** ${c.authorTimestamp ? new Date(c.authorTimestamp).toISOString() : 'N/A'}
 **Message:** ${c.message ?? ''}
 **Parents:** ${(c.parents || []).map((p: any) => p.id).join(', ') || 'None'}
-**Files Changed:** ${(c.changes || []).length ?? 'N/A'}
-
-${c.message ? `\n> ${c.message}` : ''}
 `;
 				return {
 					content: [{

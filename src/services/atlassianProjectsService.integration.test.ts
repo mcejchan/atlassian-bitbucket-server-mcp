@@ -2,6 +2,8 @@
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
+// Remove nock import
+// import nock from 'nock';
 
 const envPath = path.resolve(process.cwd(), '.env.test');
 if (fs.existsSync(envPath)) {
@@ -11,129 +13,151 @@ if (fs.existsSync(envPath)) {
 	}
 }
 
-// Now import the NEW service after environment is loaded
+// Import types
+import { McpError, ErrorType } from '../utils/error.util';
+import type { RestProject, GetProjects200Response } from '../generated/models';
+import type { ProjectApi as ProjectApiType } from '@generated/apis/ProjectApi';
+import type { Configuration as ConfigurationType } from '@generated/runtime';
+import type { BitbucketClient as BitbucketClientType } from '../utils/http/bitbucket-client';
+
+// Define mock functions for API methods
+const mockGetProjects = jest.fn();
+const mockGetProject = jest.fn();
+
+// Mock generated ProjectApi
+jest.mock('@generated/apis/ProjectApi', () => {
+	// Return a mock constructor
+	return {
+		ProjectApi: jest.fn().mockImplementation(() => {
+			// The mock instance has the mocked methods
+			return {
+				getProjects: mockGetProjects,
+				getProject: mockGetProject,
+			};
+		})
+	};
+});
+
+// Mock BitbucketClient static method using factory function
+jest.mock('../utils/http/bitbucket-client', () => {
+	// Dynamically import the Configuration class needed for the mock return value
+	const { Configuration } = jest.requireActual<typeof import('@generated/runtime')>('@generated/runtime');
+	const mockBaseUrl = process.env.ATLASSIAN_BITBUCKET_SERVER_URL || 'https://mock-bitbucket.com';
+	// Return a mock constructor/class with the mocked static method
+	return {
+		BitbucketClient: {
+			getInstance: jest.fn().mockReturnValue({
+				getGeneratedClientConfiguration: () => new Configuration({ basePath: mockBaseUrl }),
+			})
+		}
+	};
+});
+
+// Now import the service - mocks will be applied
 import { projectsService } from './atlassianProjectsService';
 
-// Use the types defined in the new service or adjust as needed
-// For simplicity, we might rely on basic checks or use 'any' initially
+const testProjectKey = 'TESTPROJ';
+const fixturesDir = path.resolve(__dirname, '__fixtures__');
 
-describe('Atlassian Projects Service (Integration)', () => {
-	let shouldSkip = false;
+describe('Atlassian Projects Service (with Mocked ProjectApi)', () => {
+	let listFixture: GetProjects200Response;
+	let getFixture: RestProject;
+	// No longer need projectsServiceInstance, use the imported singleton
 
 	beforeAll(() => {
-		// Ensure we have the required environment variables
-		// Use the variable names expected by the config/client (URL and TOKEN)
-		if (!process.env.ATLASSIAN_BITBUCKET_SERVER_URL || 
-            !process.env.ATLASSIAN_BITBUCKET_ACCESS_TOKEN) {
-			console.warn(
-				'Skipping integration tests: Requires ATLASSIAN_BITBUCKET_SERVER_URL and ATLASSIAN_BITBUCKET_ACCESS_TOKEN to be set in .env'
-			);
-			shouldSkip = true;
+		// Load Fixtures
+		try {
+			listFixture = JSON.parse(fs.readFileSync(path.join(fixturesDir, 'listProjects.json'), 'utf-8'));
+			getFixture = JSON.parse(fs.readFileSync(path.join(fixturesDir, 'getProject.json'), 'utf-8'));
+		} catch (error) {
+			console.error('Error loading fixtures:', error);
+			throw new Error('Could not load test fixtures.');
+		}
+		// No service instantiation needed here anymore
+	});
+
+	beforeEach(() => {
+		// Reset mocks before each test
+		mockGetProjects.mockClear();
+		mockGetProject.mockClear();
+		// Clear the mock static method calls if needed (optional)
+		const ActualBitbucketClientModule = jest.requireActual<{ [key: string]: any }>('../utils/http/bitbucket-client');
+		const ActualBitbucketClient = ActualBitbucketClientModule.BitbucketClient;
+		if (ActualBitbucketClient && ActualBitbucketClient.getInstance && jest.isMockFunction(ActualBitbucketClient.getInstance)) {
+			(ActualBitbucketClient.getInstance as jest.Mock).mockClear();
 		}
 	});
 
-	describe('listProjects', () => {
-		it('should list projects successfully', async () => {
-			if (shouldSkip) return;
+	/* // Nock cleanup no longer needed
+	afterAll(() => {
+		nock.cleanAll();
+		nock.enableNetConnect();
+	});
 
-			const result = await projectsService.listProjects(); // Updated method call
-            
-			// Verify response structure
-			expect(result).toBeDefined();
-			expect(result.size).toBeGreaterThanOrEqual(0);
-			expect(result.limit).toBeDefined();
-			expect(result.isLastPage).toBeDefined();
-			expect(Array.isArray(result.values)).toBe(true);
-            
-			// If we have projects, verify their structure
-			if (result.values.length > 0) {
-				const project = result.values[0];
-				expect(project.key).toBeDefined();
-				expect(project.name).toBeDefined();
-				expect(project.id).toBeDefined();
-				// Check type if it exists, otherwise skip
-				// expect(project.type).toBeDefined(); 
-				// expect(['NORMAL', 'PERSONAL']).toContain(project.type); 
-				// Basic check for links structure
-				expect(project.links?.self).toBeDefined(); 
-				if (Array.isArray(project.links?.self)) {
-					expect(project.links.self[0]?.href).toBeDefined();
-				}
-			}
+	afterEach(() => {
+		nock.cleanAll(); // Clean mocks between tests
+	});
+	*/
+
+	describe('listProjects', () => {
+		it('should list projects successfully using mock data', async () => {
+			mockGetProjects.mockResolvedValue(listFixture);
+
+			const limit = 5;
+			const result = await projectsService.listProjects({ limit });
+
+			expect(mockGetProjects).toHaveBeenCalledWith({ limit });
+			expect(result).toEqual(listFixture);
 		});
 
-		it('should support pagination', async () => {
-			if (shouldSkip) return;
+		it('should handle pagination parameters', async () => {
+			const limitedResponse = { 
+				...listFixture, 
+				size: 2, 
+				isLastPage: true, 
+				values: listFixture.values?.slice(0, 2) ?? [] 
+			};
+			mockGetProjects.mockResolvedValue(limitedResponse);
 
 			const limit = 2;
-			const result = await projectsService.listProjects({ limit }); // Updated method call
-            
-			expect(result.limit).toBe(limit);
-			expect(result.values.length).toBeLessThanOrEqual(limit);
-			expect(result.isLastPage !== undefined).toBe(true);
-            
-			if (!result.isLastPage) {
-				expect(result.nextPageStart).toBeDefined();
-			}
+			const start = 0;
+			const result = await projectsService.listProjects({ limit, start });
+
+			expect(mockGetProjects).toHaveBeenCalledWith({ limit, start });
+			expect(result).toEqual(limitedResponse);
+			expect(result.values?.length).toBeLessThanOrEqual(limit);
 		});
 	});
 
 	describe('getProject', () => {
-		let testProjectKey: string | undefined;
+		it('should get project details successfully using mock data', async () => {
+			mockGetProject.mockResolvedValue(getFixture);
 
-		beforeAll(async () => {
-			if (!shouldSkip) {
-				// Get a project key to test with
-				try {
-					const projects = await projectsService.listProjects({ limit: 1 }); // Updated method call
-					if (projects.values.length > 0) {
-						testProjectKey = projects.values[0].key;
-						console.log(`Using project key for 'get' test: ${testProjectKey}`);
-					} else {
-						console.warn("Cannot run 'getProject' tests: No projects found via listProjects.");
-					}
-				} catch (error) {
-					console.error('Error fetching project key for testing:', error);
-					// Prevent tests from running if we can't get a key
-					testProjectKey = undefined; 
-				}
-			}
+			const result = await projectsService.getProject(testProjectKey);
+
+			expect(mockGetProject).toHaveBeenCalledWith({ projectKey: testProjectKey });
+			expect(result).toEqual(getFixture);
 		});
 
-		it('should get project details successfully', async () => {
-			if (shouldSkip || !testProjectKey) return;
+		it('should throw McpError for non-existent project key', async () => {
+			const nonExistentKey = 'NON-EXISTENT-PROJECT-KEY-12345';
+			const error = new McpError('Project not found', ErrorType.NOT_FOUND, 404);
+			mockGetProject.mockRejectedValue(error);
 
-			const result = await projectsService.getProject(testProjectKey); // Updated method call
-            
-			// Verify project structure
-			expect(result).toBeDefined();
-			expect(result.key).toBe(testProjectKey);
-			expect(result.name).toBeDefined();
-			expect(result.id).toBeDefined();
-			// Check type if it exists
-			// expect(result.type).toBeDefined();
-			// expect(['NORMAL', 'PERSONAL']).toContain(result.type);
-			expect(result.links?.self).toBeDefined();
-			if (Array.isArray(result.links?.self)) {
-				expect(result.links.self[0]?.href).toBeDefined();
-			}
-            
-			// Verify additional fields that should be present in detailed response
-			expect(result.public !== undefined).toBe(true);
-			if (result.description) {
-				expect(typeof result.description).toBe('string');
-			}
+			await expect(projectsService.getProject(nonExistentKey)).rejects.toThrow(
+				error
+			);
+			expect(mockGetProject).toHaveBeenCalledWith({ projectKey: nonExistentKey });
 		});
 
-		it('should handle non-existent project', async () => {
-			if (shouldSkip) return;
-
-			// Expect the promise to reject (might throw McpError or AxiosError)
-			await expect(projectsService.getProject('NON-EXISTENT-PROJECT-KEY-12345')) // Updated method call
-				.rejects
-				.toThrow(); 
+		it('should handle other API errors', async () => {
+			const error = new McpError('Internal server error', ErrorType.API_ERROR, 500);
+			mockGetProject.mockRejectedValue(error);
+			
+			await expect(projectsService.getProject(testProjectKey)).rejects.toThrow(
+				error
+			);
+			expect(mockGetProject).toHaveBeenCalledWith({ projectKey: testProjectKey });
 		});
 	});
-
-	// TODO: Add tests for create, update, delete once implemented
 });

@@ -1,14 +1,1 @@
-{
-  "key": "PRJ",
-  "id": 217,
-  "name": "PRJ - PRJ Tools",
-  "public": false,
-  "type": "NORMAL",
-  "links": {
-    "self": [
-      {
-        "href": "https://git.repo.com/projects/PRJ"
-      }
-    ]
-  }
-}
+{"key": "TESTPROJ", "id": 101, "name": "Test Project", "description": "This is a test project.", "public": false, "type": "NORMAL", "links": {"self": [{"href": "https://example.com/projects/TESTPROJ"}]}}

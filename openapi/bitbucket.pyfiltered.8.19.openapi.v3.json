@@ -19719,7 +19719,7 @@
         ],
         "summary": "Get raw content of a file at revision",
         "description": "Retrieve the raw content for a file path at a specified revision. \n\nThe authenticated user must have <strong>REPO_READ</strong> permission for the specified repository to call this resource.",
-        "operationId": "streamRaw",
+        "operationId": "streamFileContentRaw",
         "parameters": [
           {
             "name": "path",
@@ -27117,7 +27117,7 @@
         "properties": {
           "token": {
             "type": "string",
-            "example": "faketoken"
+            "example": "MjUyOTczNTE1MDY5On2rDbID2EgYpH8AVOECHv0saruQ"
           },
           "createdDate": {
             "type": "string",
