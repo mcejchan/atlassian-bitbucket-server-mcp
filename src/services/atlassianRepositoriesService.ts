@@ -1,27 +1,28 @@
-import { BitbucketClient } from '../utils/http/bitbucket-client';
 import { Logger } from '../utils/logger.util';
 import { ProjectApi } from '@generated/apis/ProjectApi';
 import { RepositoryApi } from '@generated/apis/RepositoryApi';
+// Remove direct Configuration/Middleware imports
 // Import specific request/response types needed
 import type { 
-    GetRepositories1Request, 
-    StreamFileContentRawRequest, 
-    GetBranchesRequest, 
-    GetBranchesOrderByEnum,
-    GetCommitsRequest,
-    GetCommitRequest,
-    StreamFiles1Request
+	GetRepositories1Request, 
+	StreamFileContentRawRequest, 
+	GetBranchesRequest, 
+	GetBranchesOrderByEnum,
+	GetCommitsRequest,
+	GetCommitRequest,
+	StreamFiles1Request
 } from '@generated/apis/RepositoryApi'; 
 import type { GetRepositoryRequest, GetDefaultBranch2Request } from '@generated/apis/ProjectApi'; 
 import type { 
-    GetRepositoriesRecentlyAccessed200Response, 
-    RestRepository, 
-    GetBranches200Response, 
-    GetCommits200Response,
-    RestCommit,
-    StreamFiles200Response,
-    RestMinimalRef
+	GetRepositoriesRecentlyAccessed200Response, 
+	RestRepository, 
+	GetBranches200Response, 
+	GetCommits200Response,
+	RestCommit,
+	StreamFiles200Response,
+	RestMinimalRef
 } from '@generated/models/index';
+import { createBitbucketApiConfig } from '../utils/apiConfig'; // Import the factory
 
 export class AtlassianRepositoriesService {
 	private readonly logger: Logger;
@@ -32,12 +33,13 @@ export class AtlassianRepositoriesService {
 	private constructor() {
 		this.logger = Logger.forContext('services/atlassianRepositoriesService');
 
-		const apiConfig = BitbucketClient.getInstance().getGeneratedClientConfiguration();
+		// Use the centralized factory to get configuration
+		const apiConfig = createBitbucketApiConfig(); 
 
 		this.projectApi = new ProjectApi(apiConfig);
 		this.repositoryApi = new RepositoryApi(apiConfig);
 		
-		this.logger.debug('Service initialized with generated API clients using config from BitbucketClient.');
+		this.logger.debug('Service initialized with generated API clients using shared config.');
 	}
 
 	public static getInstance(): AtlassianRepositoriesService {
@@ -125,19 +127,9 @@ export class AtlassianRepositoriesService {
 
 		const apiResponse = await this.repositoryApi.streamFileContentRawRaw(request);
 
-        const response: Response = apiResponse.raw;
+		const response: Response = apiResponse.raw;
 
-        if (!response.ok) {
-            let errorBody = '';
-            try {
-                errorBody = await response.text();
-            } catch (e) { /* Ignore inability to read body */ }
-            const errorMessage = errorBody || response.statusText;
-            methodLogger.error(`Failed to get file content: ${response.status} ${errorMessage}`);
-            throw new Error(`Failed to get file content: ${response.status} ${errorMessage}`);
-        }
-
-		const content = await response.text();
+		const content = await response.text(); // If response was not ok, middleware would have thrown
 		methodLogger.debug(`Retrieved file content for ${filePath} (length: ${content.length})`);
 		return content;
 	}

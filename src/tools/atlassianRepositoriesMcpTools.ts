@@ -1,127 +1,25 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { projectsService } from '../services/atlassianProjectsService';
 import { repositoriesService } from '../services/atlassianRepositoriesService';
 import { formatErrorForMcpTool, createValidationError } from '../utils/error.util.js';
 import { Logger } from '../utils/logger.util';
-import { RestProject, RestRepository, RestBranch, RestMinimalRef } from '../generated';
+import { RestRepository, RestMinimalRef } from '../generated';
+import { formatRepositoryDetailsMarkdown } from '../utils/markdownFormatters';
 
-const toolLogger = Logger.forContext('tools/atlassianTools.ts');
+const toolLogger = Logger.forContext('tools/atlassianRepositoriesMcpTools');
 
 /**
- * Registers Bitbucket-related tools with the MCP server.
+ * Registers Bitbucket Repository-related tools with the MCP server.
  * @param server The McpServer instance.
  */
-export function registerAtlassianTools(server: McpServer) {
-	const registerLogger = Logger.forContext('registerAtlassianTools');
-	registerLogger.debug('Registering Bitbucket tools...');
+export function registerRepositoryMcpTools(server: McpServer) {
+	const registerLogger = Logger.forContext('registerRepositoryMcpTools');
+	registerLogger.debug('Registering Bitbucket Repository tools...');
 
-	// --- List Projects Tool ---
-	server.tool(
-		'bitbucket_list_projects', // Tool name
-		{
-			name: z.string().optional().describe("Filter projects by name containing this value."),
-			permission: z.string().optional().describe("Filter projects by permission level (e.g., PROJECT_READ, PROJECT_ADMIN). Case-insensitive."),
-			limit: z.number().int().positive().optional().default(25).describe("Maximum number of projects to return per page."),
-			start: z.number().int().nonnegative().optional().describe("0-based index of the first project to return (for pagination).")
-		},
-		async (params: any, _extra: any) => {
-			const handlerLogger = toolLogger.forMethod('bitbucket_list_projects');
-			handlerLogger.debug('Executing with params:', params);
-			try {
-				// Validation logic (optional, can be part of Zod schema)
-				if (params.limit !== undefined && (params.limit <= 0 || params.limit > 100)) {
-					throw createValidationError('Parameter "limit" must be between 1 and 100.');
-				}
-				if (params.start !== undefined && params.start < 0) {
-					throw createValidationError('Parameter "start" must be 0 or greater.');
-				}
-
-				const options = {
-					name: params.name,
-					permission: params.permission,
-					limit: params.limit,
-					start: params.start,
-				};
-
-				// Use the imported service
-				const result = await projectsService.listProjects(options);
-				handlerLogger.info(`Successfully listed ${result.values?.length ?? 0} projects.`);
-
-				// Format the result for MCP (assuming result structure)
-				// TODO: Enhance formatting based on actual API response
-				const formattedContent = result.values && result.values.length > 0
-					? result.values.map((p: RestProject) => `- **${p.name}** (Key: ${p.key}) - ${p.description ?? 'No description'}`).join('\n')
-					: 'No projects found matching the criteria.';
-
-				const paginationInfo = result.isLastPage === false
-					? `\n\n*More projects available. Next page starts at index: ${result.nextPageStart ?? 'N/A'}*`
-					: '';
-
-				// Return in the format expected by the SDK
-				return {
-					content: [{
-						type: 'text',
-						text: `## Bitbucket Projects\n\n${formattedContent}${paginationInfo}`
-					}]
-				};
-			} catch (error) {
-				handlerLogger.error('Error listing projects:', error);
-				return formatErrorForMcpTool(error); // Use ensureMcpError or a similar utility
-			}
-		}
-	);
-	registerLogger.debug('Registered tool: bitbucket_list_projects');
-
-	// --- Get Project Tool ---
-	server.tool(
-		'bitbucket_get_project',
-		{
-			projectKey: z.string().describe("The key of the project (e.g., 'PROJ')")
-		},
-		async ({ projectKey }: any, _extra: any) => {
-			const handlerLogger = toolLogger.forMethod('bitbucket_get_project');
-			// Basic validation (Zod handles type check)
-			if (typeof projectKey !== 'string' || !projectKey) {
-				handlerLogger.error('Invalid or missing projectKey', { projectKey });
-				return formatErrorForMcpTool(createValidationError('Required parameter "projectKey" must be a non-empty string.'));
-			}
-			handlerLogger.debug(`Executing with projectKey: ${projectKey}`);
-
-			try {
-				const project = await projectsService.getProject(projectKey);
-				handlerLogger.info(`Successfully retrieved project: ${project.key}`);
-
-				// Format the result using known fields from the service's Project type
-				const typedProject = project as RestProject; // Cast to generated type
-				const formattedContent =
-					`## Project: ${typedProject.name} (Key: ${typedProject.key})
-
-**ID:** ${typedProject.id}
-**Description:** ${typedProject.description || 'N/A'}
-**Public:** ${typedProject._public !== undefined ? (typedProject._public ? 'Yes' : 'No') : 'N/A'}
-**Type:** ${typedProject.type || 'N/A'}
-**Link:** ${(typedProject.links as any)?.['self']?.[0]?.href || 'N/A'}
-`;
-
-				// Return in the format expected by the SDK
-				return {
-					content: [{
-						type: 'text',
-						text: formattedContent
-					}]
-				};
-			} catch (error) {
-				handlerLogger.error('Error getting project:', error);
-				return formatErrorForMcpTool(error);
-			}
-		}
-	);
-	registerLogger.debug('Registered tool: bitbucket_get_project');
-
-	// --- List Repositories Tool ---
+	// --- List Repositories Tool --- // 
 	server.tool(
 		'bitbucket_list_repositories',
+		'List Bitbucket repositories within a specific project.',
 		{
 			projectKey: z.string().describe("The key of the project (e.g., 'PROJ')"),
 			limit: z.number().int().positive().optional().default(25).describe("Maximum number of repositories to return per page."),
@@ -143,9 +41,12 @@ export function registerAtlassianTools(server: McpServer) {
 				};
 				const result = await repositoriesService.listRepositories(params.projectKey, options);
 				handlerLogger.info(`Successfully listed ${result.values?.length ?? 0} repositories.`);
+
+				// Use imported formatter
 				const formattedContent = result.values && result.values.length > 0
-					? result.values.map(r => `- **${r.name}** (Slug: ${r.slug})`).join('\n')
+					? result.values.map(r => formatRepositoryDetailsMarkdown(r as RestRepository, undefined)).join('\n\n---\n\n')
 					: 'No repositories found matching the criteria.';
+				
 				const paginationInfo = result.isLastPage === false
 					? `\n\n*More repositories available. Next page starts at index: ${result.nextPageStart ?? 'N/A'}*`
 					: '';
@@ -163,9 +64,10 @@ export function registerAtlassianTools(server: McpServer) {
 	);
 	registerLogger.debug('Registered tool: bitbucket_list_repositories');
 
-	// --- Get Repository Tool ---
+	// --- Get Repository Tool --- // 
 	server.tool(
 		'bitbucket_get_repository',
+		'Get detailed information about a specific Bitbucket repository.',
 		{
 			projectKey: z.string().describe("The key of the project (e.g., 'PROJ')"),
 			repoSlug: z.string().describe("The slug of the repository")
@@ -180,27 +82,10 @@ export function registerAtlassianTools(server: McpServer) {
 			try {
 				const repo = await repositoriesService.getRepository(projectKey, repoSlug);
 				handlerLogger.info(`Successfully retrieved repository: ${repo.slug}`);
-				const typedRepo = repo as RestRepository; // Cast to generated type
-				const formattedContent =
-					`## Repository: ${typedRepo.name} (Slug: ${typedRepo.slug})
-
-					**ID:** ${typedRepo.id}
-					**SCM:** ${typedRepo.scmId}
-					**State:** ${typedRepo.state}
-					**Status Message:** ${typedRepo.statusMessage ?? 'N/A'}
-					**Description:** ${typedRepo.description ?? 'N/A'}
-					**Archived:** ${typedRepo.archived ? 'Yes' : 'No'}
-					**Forkable:** ${typedRepo.forkable ? 'Yes' : 'No'}
-					**Default Branch:** ${typedRepo.defaultBranch ?? 'N/A'}
-					**Project:** ${typedRepo.project?.name || 'N/A'} (Key: ${typedRepo.project?.key || 'N/A'})
-					**Project Description:** ${typedRepo.project?.description ?? 'N/A'}
-					**Public:** ${typedRepo._public !== undefined ? (typedRepo._public ? 'Yes' : 'No') : 'N/A'}
-					**Scope:** ${typedRepo.scope ?? 'N/A'}
-					**Partition:** ${typedRepo.partition ?? 'N/A'}
-					**Link:** ${(typedRepo.links as any)?.['self']?.[0]?.href || 'N/A'}
-
-					${typedRepo.origin ? `**Origin:** ${typedRepo.origin.name} (Slug: ${typedRepo.origin.slug})` : ''}
-				`;
+				
+				// Use imported formatter
+				const formattedContent = formatRepositoryDetailsMarkdown(repo as RestRepository, `Repository: ${repo.name}`);
+				
 				return {
 					content: [{
 						type: 'text',
@@ -215,9 +100,10 @@ export function registerAtlassianTools(server: McpServer) {
 	);
 	registerLogger.debug('Registered tool: bitbucket_get_repository');
 
-	// --- Get File Content Tool ---
+	// --- Get File Content Tool --- // 
 	server.tool(
 		'bitbucket_get_file_content',
+		'Get the raw content of a file in a specific repository branch/tag/commit.',
 		{
 			projectKey: z.string().describe("The key of the project (e.g., 'PROJ')"),
 			repoSlug: z.string().describe("The slug of the repository"),
@@ -248,9 +134,10 @@ export function registerAtlassianTools(server: McpServer) {
 	);
 	registerLogger.debug('Registered tool: bitbucket_get_file_content');
 
-	// --- List Branches Tool ---
+	// --- List Branches Tool --- // 
 	server.tool(
 		'bitbucket_list_branches',
+		'List branches for a specific repository.',
 		{
 			projectKey: z.string().describe("The key of the project (e.g., 'PROJ')"),
 			repoSlug: z.string().describe("The slug of the repository"),
@@ -291,9 +178,10 @@ export function registerAtlassianTools(server: McpServer) {
 	);
 	registerLogger.debug('Registered tool: bitbucket_list_branches');
 
-	// --- Get Default Branch Tool ---
+	// --- Get Default Branch Tool --- // 
 	server.tool(
 		'bitbucket_get_default_branch',
+		'Get the default branch for a specific repository.',
 		{
 			projectKey: z.string().describe("The key of the project (e.g., 'PROJ')"),
 			repoSlug: z.string().describe("The slug of the repository")
@@ -305,11 +193,7 @@ export function registerAtlassianTools(server: McpServer) {
 				const branch: RestMinimalRef = await repositoriesService.getDefaultBranch(projectKey, repoSlug);
 				handlerLogger.info(`Successfully retrieved default branch: ${branch.displayId}`);
 				const formattedContent =
-					`## Default Branch
-
-**Name:** ${branch.displayId ?? 'N/A'}
-**ID:** ${branch.id ?? 'N/A'}
-`;
+					`## Default Branch\n\n**Name:** ${branch.displayId ?? 'N/A'}\n**ID:** ${branch.id ?? 'N/A'}\n`;
 				return {
 					content: [{
 						type: 'text',
@@ -324,9 +208,10 @@ export function registerAtlassianTools(server: McpServer) {
 	);
 	registerLogger.debug('Registered tool: bitbucket_get_default_branch');
 
-	// --- List Commits Tool ---
+	// --- List Commits Tool --- // 
 	server.tool(
 		'bitbucket_list_commits',
+		'List commits for a specific repository, optionally filtering by branch, path, or author.',
 		{
 			projectKey: z.string().describe("The key of the project (e.g., 'PROJ')"),
 			repoSlug: z.string().describe("The slug of the repository"),
@@ -354,12 +239,7 @@ export function registerAtlassianTools(server: McpServer) {
 						const authorInfo = c.author ? `${c.author.name} <${c.author.emailAddress}>` : 'Unknown Author';
 						const committerInfo = c.committer ? `${c.committer.name} <${c.committer.emailAddress}>` : 'Unknown Committer';
 						return (
-							`- **Commit:** ${c.displayId} (ID: ${c.id ?? 'N/A'})
-  **Author:** ${authorInfo}
-  **Committer:** ${committerInfo}
-  **Date:** ${c.authorTimestamp ? new Date(c.authorTimestamp).toLocaleString() : 'N/A'}
-  **Message:** ${c.message ?? 'N/A'}
-  **Parents:** ${c.parents?.map(p => p.displayId).join(', ') || 'None'}`
+							`- **Commit:** ${c.displayId} (ID: ${c.id ?? 'N/A'})\n  **Author:** ${authorInfo}\n  **Committer:** ${committerInfo}\n  **Date:** ${c.authorTimestamp ? new Date(c.authorTimestamp).toLocaleString() : 'N/A'}\n  **Message:** ${c.message ?? 'N/A'}\n  **Parents:** ${(c.parents || []).map(p => p.displayId).join(', ') || 'None'}`
 						);
 					}).join('\n\n')
 					: 'No commits found matching the criteria.';
@@ -380,9 +260,10 @@ export function registerAtlassianTools(server: McpServer) {
 	);
 	registerLogger.debug('Registered tool: bitbucket_list_commits');
 
-	// --- Get Commit Tool ---
+	// --- Get Commit Tool --- // 
 	server.tool(
 		'bitbucket_get_commit',
+		'Get details for a specific commit hash (SHA) in a repository.',
 		{
 			projectKey: z.string().describe("The key of the project (e.g., 'PROJ')"),
 			repoSlug: z.string().describe("The slug of the repository"),
@@ -395,13 +276,7 @@ export function registerAtlassianTools(server: McpServer) {
 				const c = await repositoriesService.getCommit(projectKey, repoSlug, commitId);
 				handlerLogger.info(`Successfully retrieved commit: ${c.id}`);
 				const formattedContent =
-					`## Commit: ${c.id}
-
-**Author:** ${c.author?.name ?? 'Unknown'}
-**Date:** ${c.authorTimestamp ? new Date(c.authorTimestamp).toISOString() : 'N/A'}
-**Message:** ${c.message ?? ''}
-**Parents:** ${(c.parents || []).map((p: any) => p.id).join(', ') || 'None'}
-`;
+					`## Commit: ${c.id}\n\n**Author:** ${c.author?.name ?? 'Unknown'}\n**Date:** ${c.authorTimestamp ? new Date(c.authorTimestamp).toISOString() : 'N/A'}\n**Message:** ${c.message ?? ''}\n**Parents:** ${(c.parents || []).map((p: any) => p.id).join(', ') || 'None'}\n`;
 				return {
 					content: [{
 						type: 'text',
@@ -416,9 +291,10 @@ export function registerAtlassianTools(server: McpServer) {
 	);
 	registerLogger.debug('Registered tool: bitbucket_get_commit');
 
-	// --- List Files/Directories Tool ---
+	// --- List Files Tool --- // 
 	server.tool(
 		'bitbucket_list_files',
+		'List files and directories within a specific repository path, at a given ref.',
 		{
 			projectKey: z.string().describe("The key of the project (e.g., 'PROJ')"),
 			repoSlug: z.string().describe("The slug of the repository"),
@@ -459,5 +335,5 @@ export function registerAtlassianTools(server: McpServer) {
 	);
 	registerLogger.debug('Registered tool: bitbucket_list_files');
 
-	registerLogger.info('All Bitbucket tools registered successfully.');
-}
+	registerLogger.info('All Bitbucket Repository tools registered successfully.');
+} 

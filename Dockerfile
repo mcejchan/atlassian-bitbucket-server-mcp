@@ -17,9 +17,10 @@ COPY . .
 RUN npm run build
 
 # Ensure the entrypoint is executable (already set in prepare, but reensure here)
-RUN chmod +x dist/src/index.js
+RUN chmod +x dist/index.js
 
 EXPOSE 3000
 
-# Start the MCP server
-CMD [ "npm", "start" ]
+# Start the MCP server with environment variable mapping
+# Append /rest to the server URL if not already present
+CMD node dist/index.js

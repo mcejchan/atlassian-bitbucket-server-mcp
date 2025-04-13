@@ -10,6 +10,9 @@ process.on('unhandledRejection', (reason) => {
 	process.exit(1);
 });
 import 'module-alias/register';
+// Initialize module aliases
+import './utils/moduleAlias.js';
+
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
@@ -18,8 +21,8 @@ import http from 'http';
 import { config } from './utils/config.util.js';
 import { VERSION, CLI_NAME } from './utils/constants.util.js';
 import { Logger } from './utils/logger.util.js';
-import { registerAtlassianTools } from './tools/atlassianTools.js';
-import { runCli } from './cli/index.js';
+import { registerProjectMcpTools } from './tools/atlassianProjectsMcpTools.js';
+import { registerRepositoryMcpTools } from './tools/atlassianRepositoriesMcpTools.js';
 
 // Create a contextualized logger for this file
 const indexLogger = Logger.forContext('index.ts');
@@ -47,7 +50,8 @@ export async function startServer() {
 		});
 
 		indexLogger.info('Registering MCP tools...');
-		registerAtlassianTools(serverInstance);
+		registerProjectMcpTools(serverInstance);
+		registerRepositoryMcpTools(serverInstance);
 
 		if (transportType === 'stdio') {
 			indexLogger.info('Initializing STDIO transport...');
@@ -98,8 +102,25 @@ async function main() {
 	if (process.argv.length > 2) {
 		// CLI mode: Pass arguments to CLI runner
 		mainLogger.info('Starting in CLI mode');
-		await runCli(process.argv.slice(2));
-		mainLogger.info('CLI execution completed');
+		const args = process.argv.slice(2);
+		if (args.includes('--cli') || args.includes('-c')) {
+			// Run in CLI mode
+			mainLogger.info('Starting in CLI mode...');
+			try {
+				const { runCli } = await import('./cli/index.js');
+				// Remove the '--cli' or '-c' flag from args
+				const cliArgs = args.filter(arg => arg !== '--cli' && arg !== '-c');
+				await runCli(cliArgs);
+			} catch (error) {
+				mainLogger.error('Failed to run CLI:', error);
+				process.exit(1);
+			}
+		} else {
+			// MCP Server mode: Start server with default STDIO
+			mainLogger.info('Starting in server mode');
+			await startServer();
+			mainLogger.info('Server is now running');
+		}
 	} else {
 		// MCP Server mode: Start server with default STDIO
 		mainLogger.info('Starting in server mode');
@@ -107,8 +128,8 @@ async function main() {
 		mainLogger.info('Server is now running');
 	}
 
-	await startServer();
-	mainLogger.info('startServer() finished. Process should remain active via MCP connection.');
+	// Remove the redundant startServer call
+	mainLogger.info('Process should remain active via MCP connection.');
 }
 
 /**
@@ -121,12 +142,18 @@ if (require.main === module) {
 	const isCliMode = userArgs.length > 0 && cliCommands.some(cmd => userArgs[0].toLowerCase().startsWith(cmd));
 
 	if (isCliMode) {
-		runCli(userArgs).catch((err) => {
-			indexLogger.error('Unhandled error in CLI mode', err);
+		// Import runCli dynamically to use the updated function signature
+		import('./cli/index.js').then(({ runCli }) => {
+			runCli(userArgs).catch((err: Error) => {
+				indexLogger.error('Unhandled error in CLI mode', err);
+				process.exit(1);
+			});
+		}).catch((err: Error) => {
+			indexLogger.error('Failed to import CLI module', err);
 			process.exit(1);
 		});
 	} else {
-		main().catch((err) => {
+		main().catch((err: Error) => {
 			indexLogger.error('Unhandled error in main process', err);
 			process.exit(1);
 		});

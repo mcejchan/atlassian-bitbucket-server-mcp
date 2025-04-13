@@ -4,6 +4,7 @@ import { VERSION, CLI_NAME } from '../utils/constants.util.js';
 
 // Import Bitbucket-specific CLI modules using named import
 import { registerProjectCommands } from './atlassian.projects.cli.js';
+import { registerRepositoryCommands } from './atlassian.repositories.cli.js';
 
 // Package description
 const DESCRIPTION =
@@ -15,22 +16,40 @@ const cliLogger = Logger.forContext('cli/index.ts');
 // Log CLI initialization
 cliLogger.debug('Bitbucket CLI module initialized');
 
-export async function runCli(args: string[]) {
+/**
+ * Setup and run the CLI application.
+ */
+export async function runCli(args: string[]): Promise<void> {
 	const program = new Command();
 
 	program.name(CLI_NAME).description(DESCRIPTION).version(VERSION);
 
 	// Register CLI commands using the imported function
-	registerProjectCommands(program);
-	cliLogger.debug('Project commands registered');
-
-	// Handle unknown commands
-	program.on('command:*', (operands: any) => {
-		console.error(`error: unknown command '${operands[0]}'
-See --help for a list of available commands.`);
+	cliLogger.debug('Registering command groups...');
+	try {
+		registerProjectCommands(program);
+		registerRepositoryCommands(program);
+		cliLogger.info('All command groups registered successfully.');
+	} catch (error) {
+		cliLogger.error('Failed to register command groups:', error);
 		process.exit(1);
-	});
+	}
 
-	// Parse arguments; default to help if no command provided
-	await program.parseAsync(args.length ? args : ['--help'], { from: 'user' });
+	// Hook up the MCP server to a base command if needed (example)
+	// program
+	//     .command('mcp')
+	//     .description('Interact with the MCP server')
+	//     .action(async () => {
+	//         // Example: Start server in stdio mode if command is run
+	//         serverInstance.listenStdio();
+	//         cliLogger.info('MCP Server listening on stdio...');
+	//     });
+
+	// Parse arguments
+	cliLogger.debug('Parsing CLI arguments...');
+	await program.parseAsync(['node', 'script.js', ...args]);
+
+	if (!args.length) {
+		program.outputHelp();
+	}
 }

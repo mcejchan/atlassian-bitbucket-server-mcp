@@ -1,8 +1,8 @@
 import { Logger } from '../utils/logger.util';
 import { projectsService } from '../services/atlassianProjectsService';
-
+import { RestProject } from '@generated/models'; // Ensure RestProject is imported
 import { formatPagination } from '../utils/formatter.util';
-
+import { formatProjectDetailsMarkdown } from '../utils/markdownFormatters'; // Import from new utils location
 import { McpError, ErrorType } from '../utils/error.util';
 
 // Update context logger name
@@ -10,45 +10,6 @@ const controllerLogger = Logger.forContext('controllers/atlassianProjectsControl
 
 // Update class name
 class AtlassianProjectsController {
-	/**
-     * Format a project's details into markdown
-     */
-	// TODO: Update RestProject type if the new service uses a different type
-	private formatProjectDetails(project: any, title: string): string { // Use any for now, refine later
-		let content = `# ${title}\n\n`;
-		content += '## Basic Information\n\n';
-		content += `**Key**: \`${project.key}\`\n`;
-		content += `**Name**: ${project.name}\n`;
-		if (project.description) {
-			content += `**Description**: ${project.description}\n`;
-		}
-		if (project.type) {
-			content += `**Type**: ${project.type}\n`;
-		}
-		if (typeof project._public === 'boolean') {
-			content += `**Public**: ${project._public ? 'Yes' : 'No'}\n`;
-		}
-		content += '\n';
-
-		// Adjust links handling based on the new service's type
-		if ((project.links as any)?.self && Array.isArray((project.links as any).self) && (project.links as any).self.length > 0) {
-			content += '## Links\n\n';
-			// Assuming the first self link is the primary one
-			try {
-				const selfLink = (project.links as any).self[0].href;
-				if (selfLink) {
-					content += `- self: ${selfLink}\n`;
-				}
-			} catch (e) { // Belt and suspenders
-				controllerLogger.warn('Could not extract self link from project links', project.links);
-			}
-			// Add other links if needed and available in the type
-			content += '\n';
-		}
-
-		return content;
-	}
-
 	/**
      * List projects with optional filtering
      */
@@ -58,7 +19,6 @@ class AtlassianProjectsController {
 		methodLogger.debug('Listing projects with options:', options);
 
 		try {
-			// Use the correct method name from the new service
 			const projects = await projectsService.listProjects(options);
 
 			let content = '# Bitbucket Projects\n\n';
@@ -68,38 +28,12 @@ class AtlassianProjectsController {
 				return { content };
 			}
 
-			// Add summary
-			content += `Found ${projects.size} project(s)\n\n`;
+			content += `Showing ${projects.values.length} of ${projects.size} project(s)\n\n`;
 
-			// List each project
-			for (const project of projects.values) {
-				content += `## ${project.name}\n\n`;
-				content += `**Key**: \`${project.key}\`\n`;
-				if (project.description) {
-					content += `**Description**: ${project.description}\n`;
-				}
-				if (project.type) {
-					content += `**Type**: ${project.type}\n`;
-				}
-				if (typeof project._public === 'boolean') {
-					content += `**Public**: ${project._public ? 'Yes' : 'No'}\n`;
-				}
-				content += '\n';
-
-				// Adjust links handling in list view
-				if ((project.links as any)?.self && Array.isArray((project.links as any).self) && (project.links as any).self.length > 0) {
-					content += '### Links\n\n';
-					try {
-						const selfLink = (project.links as any).self[0].href;
-						if (selfLink) {
-							content += `- self: ${selfLink}\n`;
-						}
-					} catch (e) { // Belt and suspenders
-						controllerLogger.warn('Could not extract self link from project links', project.links);
-					}
-					content += '\n';
-				}
-			}
+			// Use the imported formatter for each project
+			content += projects.values.map(project => 
+				formatProjectDetailsMarkdown(project as RestProject, undefined)
+			).join('\n\n---\n\n'); // Separate projects
 
 			// Add pagination information
 			const count = projects.size || projects.values.length;
@@ -110,10 +44,9 @@ class AtlassianProjectsController {
 				content,
 				pagination: formatPagination(count, hasMore, nextCursor)
 			};
-		} catch (error) {
-			methodLogger.error('Failed to list projects:', error);
-			// Add status code and original error to McpError
-			throw new McpError('Failed to list projects', ErrorType.API_ERROR, 500, error as Error);
+		} catch (e) { 
+			methodLogger.error('Failed to list projects:', e);
+			throw new McpError('Failed to list projects', ErrorType.API_ERROR, 500, e as Error);
 		}
 	}
 
@@ -126,17 +59,15 @@ class AtlassianProjectsController {
 		methodLogger.debug(`Getting project details for: ${projectKey}`);
 
 		try {
-			// Use the correct method name from the new service
 			const project = await projectsService.getProject(projectKey);
-			const content = this.formatProjectDetails(project, `Project: ${project.name}`);
+			// Use the imported formatter
+			const content = formatProjectDetailsMarkdown(project as RestProject, `Project: ${project.name}`);
 			return { content };
-		} catch (error) {
-			methodLogger.error(`Failed to get project ${projectKey}:`, error);
-			// Add status code and original error to McpError
-			throw new McpError(`Failed to get project ${projectKey}`, ErrorType.API_ERROR, 500, error as Error);
+		} catch (e) { 
+			methodLogger.error(`Failed to get project ${projectKey}:`, e);
+			throw new McpError(`Failed to get project ${projectKey}`, ErrorType.API_ERROR, 500, e as Error);
 		}
 	}
 }
 
-// Update exported instance name
 export const atlassianProjectsController = new AtlassianProjectsController();

@@ -2,8 +2,9 @@
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
-// Remove nock import
-// import nock from 'nock';
+import { jest } from '@jest/globals';
+// Nock is not needed here as we mock the ProjectApi directly
+// import nock from 'nock'; 
 
 const envPath = path.resolve(process.cwd(), '.env.test');
 if (fs.existsSync(envPath)) {
@@ -16,13 +17,11 @@ if (fs.existsSync(envPath)) {
 // Import types
 import { McpError, ErrorType } from '../utils/error.util';
 import type { RestProject, GetProjects200Response } from '../generated/models';
-import type { ProjectApi as ProjectApiType } from '@generated/apis/ProjectApi';
-import type { Configuration as ConfigurationType } from '@generated/runtime';
-import type { BitbucketClient as BitbucketClientType } from '../utils/http/bitbucket-client';
+import type { GetProjectsRequest, GetProjectRequest } from '../generated/apis/ProjectApi';
 
-// Define mock functions for API methods
-const mockGetProjects = jest.fn();
-const mockGetProject = jest.fn();
+// Define mock functions for API methods with explicit types
+const mockGetProjects = jest.fn< (params: GetProjectsRequest) => Promise<GetProjects200Response> >();
+const mockGetProject = jest.fn< (params: GetProjectRequest) => Promise<RestProject> >();
 
 // Mock generated ProjectApi
 jest.mock('@generated/apis/ProjectApi', () => {
@@ -38,20 +37,7 @@ jest.mock('@generated/apis/ProjectApi', () => {
 	};
 });
 
-// Mock BitbucketClient static method using factory function
-jest.mock('../utils/http/bitbucket-client', () => {
-	// Dynamically import the Configuration class needed for the mock return value
-	const { Configuration } = jest.requireActual<typeof import('@generated/runtime')>('@generated/runtime');
-	const mockBaseUrl = process.env.ATLASSIAN_BITBUCKET_SERVER_URL || 'https://mock-bitbucket.com';
-	// Return a mock constructor/class with the mocked static method
-	return {
-		BitbucketClient: {
-			getInstance: jest.fn().mockReturnValue({
-				getGeneratedClientConfiguration: () => new Configuration({ basePath: mockBaseUrl }),
-			})
-		}
-	};
-});
+// REMOVED: Mock for ../utils/http/bitbucket-client
 
 // Now import the service - mocks will be applied
 import { projectsService } from './atlassianProjectsService';
@@ -59,10 +45,19 @@ import { projectsService } from './atlassianProjectsService';
 const testProjectKey = 'TESTPROJ';
 const fixturesDir = path.resolve(__dirname, '__fixtures__');
 
+// Load fixtures function (assuming it exists)
+const loadFixture = (fixturePath: string) => {
+	const fullPath = path.resolve(__dirname, '__fixtures__', fixturePath);
+	return JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
+};
+
+// Use the base URL expected by nock from the errors, or use env var if set for tests
+const TEST_BASE_URL = process.env.ATLASSIAN_BITBUCKET_SERVER_URL || 'http://example.com:7990';
+const MOCK_API_BASE = `${TEST_BASE_URL}/rest/api/latest`;
+
 describe('Atlassian Projects Service (with Mocked ProjectApi)', () => {
 	let listFixture: GetProjects200Response;
 	let getFixture: RestProject;
-	// No longer need projectsServiceInstance, use the imported singleton
 
 	beforeAll(() => {
 		// Load Fixtures
@@ -73,31 +68,16 @@ describe('Atlassian Projects Service (with Mocked ProjectApi)', () => {
 			console.error('Error loading fixtures:', error);
 			throw new Error('Could not load test fixtures.');
 		}
-		// No service instantiation needed here anymore
 	});
 
 	beforeEach(() => {
 		// Reset mocks before each test
 		mockGetProjects.mockClear();
 		mockGetProject.mockClear();
-		// Clear the mock static method calls if needed (optional)
-		const ActualBitbucketClientModule = jest.requireActual<{ [key: string]: any }>('../utils/http/bitbucket-client');
-		const ActualBitbucketClient = ActualBitbucketClientModule.BitbucketClient;
-		if (ActualBitbucketClient && ActualBitbucketClient.getInstance && jest.isMockFunction(ActualBitbucketClient.getInstance)) {
-			(ActualBitbucketClient.getInstance as jest.Mock).mockClear();
-		}
+		// REMOVED: Clear mock for BitbucketClient static method
 	});
 
-	/* // Nock cleanup no longer needed
-	afterAll(() => {
-		nock.cleanAll();
-		nock.enableNetConnect();
-	});
-
-	afterEach(() => {
-		nock.cleanAll(); // Clean mocks between tests
-	});
-	*/
+	// REMOVED: nock beforeEach, afterEach, afterAll
 
 	describe('listProjects', () => {
 		it('should list projects successfully using mock data', async () => {
@@ -141,7 +121,10 @@ describe('Atlassian Projects Service (with Mocked ProjectApi)', () => {
 
 		it('should throw McpError for non-existent project key', async () => {
 			const nonExistentKey = 'NON-EXISTENT-PROJECT-KEY-12345';
-			const error = new McpError('Project not found', ErrorType.NOT_FOUND, 404);
+			// Use ApiClientError now if that's what the middleware throws, or the original McpError if you catch/re-throw
+			// Assuming middleware throws ApiClientError and service re-throws or it bubbles up
+			// const error = new ApiClientError('Project not found', 404); // Example
+			const error = new McpError('Project not found', ErrorType.NOT_FOUND, 404); // Original error type
 			mockGetProject.mockRejectedValue(error);
 
 			await expect(projectsService.getProject(nonExistentKey)).rejects.toThrow(
@@ -151,7 +134,8 @@ describe('Atlassian Projects Service (with Mocked ProjectApi)', () => {
 		});
 
 		it('should handle other API errors', async () => {
-			const error = new McpError('Internal server error', ErrorType.API_ERROR, 500);
+			// const error = new ApiClientError('Internal server error', 500); // Example
+			const error = new McpError('Internal server error', ErrorType.API_ERROR, 500); // Original error type
 			mockGetProject.mockRejectedValue(error);
 			
 			await expect(projectsService.getProject(testProjectKey)).rejects.toThrow(
@@ -161,3 +145,5 @@ describe('Atlassian Projects Service (with Mocked ProjectApi)', () => {
 		});
 	});
 });
+
+// REMOVED: Second describe block 'AtlassianProjectsService Integration (Mocked)'

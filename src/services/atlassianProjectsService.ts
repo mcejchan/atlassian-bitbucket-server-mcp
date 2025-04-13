@@ -1,8 +1,9 @@
-import { BitbucketClient } from '../utils/http/bitbucket-client';
 import { Logger } from '../utils/logger.util';
 // Import generated API client and types
 import { ProjectApi, GetProjectsRequest } from '@generated/apis/ProjectApi';
+// Remove direct Configuration/Middleware imports
 import type { RestProject, GetProjects200Response } from '@generated/models/index';
+import { createBitbucketApiConfig } from '../utils/apiConfig'; // Import the factory
 
 /**
  * Service for interacting with Bitbucket Projects API using generated client
@@ -15,10 +16,12 @@ export class AtlassianProjectsService {
 	private constructor() {
 		this.logger = Logger.forContext('services/atlassianProjectsService');
 
-		const apiConfig = BitbucketClient.getInstance().getGeneratedClientConfiguration();
+		// Use the centralized factory to get configuration
+		const apiConfig = createBitbucketApiConfig(); 
+
 		this.projectApi = new ProjectApi(apiConfig);
 
-		this.logger.debug('Service initialized with generated ProjectApi client using config from BitbucketClient.');
+		this.logger.debug('Service initialized with generated ProjectApi client using shared config.');
 	}
 
 	/**
@@ -76,7 +79,7 @@ export class AtlassianProjectsService {
 			methodLogger.debug('Project details:', {
 				id: response.id,
 				type: response.type,
-				public: response._public // Keep using _public here based on model
+				public: response._public
 			});
 
 			return response;
