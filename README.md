@@ -22,7 +22,7 @@ This server enables AI systems to interact with Bitbucket repositories by provid
 ### Installation
 
 ```bash
-git clone <this-repo-url>
+git clone [<atlassian-bitbucket-server-mcp>](https://github.com/guenichone/atlassian-bitbucket-server-mcp)
 cd mcp-server-selfhosted-bitbucket
 npm install
 npm run build-app
