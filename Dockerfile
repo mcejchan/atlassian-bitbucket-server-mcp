@@ -4,6 +4,9 @@ FROM node:lts-alpine
 # Create app directory
 WORKDIR /usr/src/app
 
+# Install bash for entrypoint script
+RUN apk add --no-cache bash
+
 # Copy package files
 COPY package*.json ./
 
@@ -16,11 +19,19 @@ COPY . .
 # Build the TypeScript code
 RUN npm run build
 
-# Ensure the entrypoint is executable (already set in prepare, but reensure here)
-RUN chmod +x dist/index.js
+# Make entrypoint script executable
+RUN chmod +x /usr/src/app/docker-entrypoint.sh
 
+# Expose default port
 EXPOSE 3000
 
-# Start the MCP server with environment variable mapping
-# Append /rest to the server URL if not already present
-CMD node dist/index.js
+# Set environment variables
+ENV DEBUG=false
+ENV MCP_TRANSPORT=stdio
+ENV PORT=3000
+ENV BITBUCKET_VERSION=8.19
+ENV ATLASSIAN_BITBUCKET_SERVER_URL=
+ENV ATLASSIAN_BITBUCKET_ACCESS_TOKEN=
+
+# Use entrypoint script to start the server
+ENTRYPOINT ["/usr/src/app/docker-entrypoint.sh"]

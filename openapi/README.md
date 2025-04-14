@@ -1,31 +1,67 @@
-# OpenAPI Folder
+# OpenAPI Integration
 
-This directory contains OpenAPI specifications and related scripts/configs for Atlassian Bitbucket Server.
+This directory manages the Bitbucket Server API integration through OpenAPI specifications.
 
-## Contents
+## Overview
 
-- **bitbucket.8.19.openapi.v3.json**  
-  The full, unmodified OpenAPI v3 contract for Bitbucket Server 8.19, downloaded from Atlassian:
-  [Original Swagger JSON](https://dac-static.atlassian.com/server/bitbucket/8.19.swagger.v3.json?_v=1.637.20)
+The system works in three main stages:
 
-- **bitbucket.pyfiltered.subset.openapi.v3.json**  
-  A filtered subset of the OpenAPI contract, used for code generation and tooling.
+1. **Download** the official Bitbucket Server OpenAPI specification
+2. **Filter** the specification to include only required endpoints
+3. **Generate** TypeScript client code from the filtered specification
+
+## Key Files
+
+- **bitbucket.downloaded.8.19.openapi.v3.json**  
+  The complete OpenAPI v3 specification for Bitbucket Server 8.19 from Atlassian
+
+- **bitbucket.pyfiltered.8.19.openapi.v3.json**  
+  The filtered specification containing only endpoints with tags: "Project", "Pull Requests", "Repository", "Authentication"
 
 - **filter_openapi.py**  
-  Python script to generate the filtered contract from the full contract.
+  Python script that processes the full specification to:
+  - Keep only endpoints with selected tags
+  - Fix duplicate operation IDs
+  - Include all required schema references
+  - Sanitize operation names for TypeScript compatibility
 
-- **openapi-generator-config.json**, **openapi-v2-config.json**, **openapitools.json**  
-  Configuration files for OpenAPI code generation tools.
+- **openapi-generator-config.json**  
+  Configuration for the OpenAPI Generator that controls TypeScript output settings
 
-## How to Generate the Filtered OpenAPI Contract
+## Working with the API
 
-1. Ensure you have Python 3 installed.
-2. From the project root, run:
+### Filtering the Specification
 
-   ```bash
-   python3 openapi/filter_openapi.py
-   ```
+```bash
+# Filter the API to include only needed endpoints
+npm run filter-spec
+```
 
-   This will read `bitbucket.8.19.openapi.v3.json` and output the filtered contract as `bitbucket.pyfiltered.subset.openapi.v3.json` in this folder.
+This command runs the Python script which reads the downloaded specification and creates a filtered version.
 
-3. Use the filtered contract and configs in this directory for code generation or further processing.
+### Generating TypeScript Client
+
+```bash
+# Generate the TypeScript API client
+npm run generate
+```
+
+This creates strongly-typed API client code in `src/generated/` directory, providing:
+
+- Type-safe API calls
+- Request/response models
+- Authentication handling
+
+### Complete Rebuild
+
+```bash
+# Clean, filter, and regenerate the API client
+npm run rebuild
+```
+
+This command performs a complete regeneration of the API client by:
+
+1. Removing previously generated files
+2. Filtering the OpenAPI specification
+3. Generating fresh TypeScript client code
+4. Building the project

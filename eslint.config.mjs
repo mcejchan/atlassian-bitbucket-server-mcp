@@ -5,7 +5,15 @@ import tseslint from 'typescript-eslint';
 export default tseslint.config(
 	// Global ignores
 	{
-		ignores: ['node_modules/**', 'dist/**', 'examples/**', 'src/generated/**'],
+		ignores: [
+			'node_modules/**',
+			'dist/**',
+			'examples/**',
+			'src/generated/**',
+			'**/src/generated/**',
+			'src/generated',
+			'jest.setup.js'
+		],
 	},
 	// Base ESLint recommended rules
 	eslint.configs.recommended,

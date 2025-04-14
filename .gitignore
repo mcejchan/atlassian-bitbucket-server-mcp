@@ -62,11 +62,11 @@ scripts/src/
 scripts/**/*.js
 scripts/**/*.d.ts
 
-# Ignore all .env files except .env.example
-.env
-.env.*
-!.env.example
-
 # Exclude filtered OpenAPI specifications
 # openapi/bitbucket.pyfiltered.*.openapi.v3.json
 openapi/bitbucket.downloaded.*.openapi.v3.json
+
+# Cursor and Windsurf specific folders
+.cursor/
+.windsurf/
+

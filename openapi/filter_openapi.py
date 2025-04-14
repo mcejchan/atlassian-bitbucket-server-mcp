@@ -252,7 +252,7 @@ if __name__ == "__main__":
     script_dir = os.path.dirname(__file__)
     input_url = f"https://dac-static.atlassian.com/server/bitbucket/{version}.swagger.v3.json"
 
-    output_filename = f"bitbucket.downloaded.{version}.openapi.v3.json"
+    output_filename = f"bitbucket.pyfiltered.{version}.openapi.v3.json"
     output_file_path = os.path.join(script_dir, output_filename)
 
     print(f"Input URL: {input_url}")

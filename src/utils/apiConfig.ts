@@ -1,4 +1,4 @@
-import { Configuration, Middleware, RequestContext, ResponseContext } from '@generated/runtime';
+import { Configuration, Middleware, RequestContext, ResponseContext } from '../generated/src/runtime';
 import { Logger } from './logger.util';
 import { config } from './config.util';
 

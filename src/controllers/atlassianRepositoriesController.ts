@@ -3,7 +3,7 @@ import { repositoriesService } from '../services/atlassianRepositoriesService';
 import { formatRepositoryDetailsMarkdown } from '../utils/markdownFormatters';
 import { formatPagination } from '../utils/formatter.util';
 import { createApiError } from '../utils/error.util';
-import { RestRepository, RestCommit } from '@generated/models'; // Add necessary types
+import { RestRepository, RestCommit } from '../generated/src/models'; // Add necessary types
 
 const controllerLogger = Logger.forContext('controllers/atlassianRepositoriesController.ts');
 

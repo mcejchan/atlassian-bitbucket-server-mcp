@@ -5,8 +5,8 @@ import moduleAlias from 'module-alias';
 const baseDir = path.resolve(process.cwd());
 
 moduleAlias.addAliases({
-  '@src': path.join(baseDir, 'dist'),
-  '@generated': path.join(baseDir, 'dist/generated')
+	'@src': path.join(baseDir, 'dist/src'),
+	'../generated/src': path.join(baseDir, 'dist/generated/src')
 });
 
 export default moduleAlias; 

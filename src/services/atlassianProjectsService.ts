@@ -1,8 +1,8 @@
 import { Logger } from '../utils/logger.util';
 // Import generated API client and types
-import { ProjectApi, GetProjectsRequest } from '@generated/apis/ProjectApi';
+import { ProjectApi, GetProjectsRequest } from '../generated/src/apis/ProjectApi';
 // Remove direct Configuration/Middleware imports
-import type { RestProject, GetProjects200Response } from '@generated/models/index';
+import type { RestProject, GetProjects200Response } from '../generated/src/models/index';
 import { createBitbucketApiConfig } from '../utils/apiConfig'; // Import the factory
 
 /**

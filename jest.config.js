@@ -5,6 +5,7 @@ module.exports = {
 	testMatch: ['**/src/**/*.test.ts'],
 	transform: {
 		'^.+\\.tsx?$': ['ts-jest', { useESM: true }],
+		'^.+\\.jsx?$': 'babel-jest'
 	},
 	extensionsToTreatAsEsm: ['.ts'],
 	moduleNameMapper: {
@@ -14,4 +15,5 @@ module.exports = {
 	modulePathIgnorePatterns: [
 		'<rootDir>/dist/'
 	],
+	setupFilesAfterEnv: ['<rootDir>/jest.setup.js']
 };

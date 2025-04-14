@@ -1,8 +1,0 @@
----
-description: 
-globs: 
-alwaysApply: true
----
-NEVER CREATE OR UPDATE COMMIT
-NEVER UPDATE HISTORY
-NEVER STASH

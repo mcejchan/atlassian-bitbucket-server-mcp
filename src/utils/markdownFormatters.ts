@@ -1,6 +1,5 @@
-import { RestProject, RestRepository } from '@generated/models';
 import { Logger } from './logger.util';
-
+import type { RestProject, RestRepository } from '@generated/models';
 const logger = Logger.forContext('utils/markdownFormatters');
 
 /**

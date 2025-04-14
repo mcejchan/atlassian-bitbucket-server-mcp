@@ -1,9 +1,9 @@
-import { Logger } from '../utils/logger.util';
+import { RestProject } from '../generated/src/models'; // Ensure RestProject is imported
 import { projectsService } from '../services/atlassianProjectsService';
-import { RestProject } from '@generated/models'; // Ensure RestProject is imported
+import { ErrorType, McpError } from '../utils/error.util';
 import { formatPagination } from '../utils/formatter.util';
+import { Logger } from '../utils/logger.util';
 import { formatProjectDetailsMarkdown } from '../utils/markdownFormatters'; // Import from new utils location
-import { McpError, ErrorType } from '../utils/error.util';
 
 // Update context logger name
 const controllerLogger = Logger.forContext('controllers/atlassianProjectsController.ts');
@@ -11,8 +11,8 @@ const controllerLogger = Logger.forContext('controllers/atlassianProjectsControl
 // Update class name
 class AtlassianProjectsController {
 	/**
-     * List projects with optional filtering
-     */
+	 * List projects with optional filtering
+	 */
 	// Method name remains 'list' as used by the CLI
 	async list(options?: { name?: string; permission?: string; start?: number; limit?: number }) {
 		const methodLogger = controllerLogger.forMethod('list');
@@ -31,7 +31,7 @@ class AtlassianProjectsController {
 			content += `Showing ${projects.values.length} of ${projects.size} project(s)\n\n`;
 
 			// Use the imported formatter for each project
-			content += projects.values.map(project => 
+			content += projects.values.map(project =>
 				formatProjectDetailsMarkdown(project as RestProject, undefined)
 			).join('\n\n---\n\n'); // Separate projects
 
@@ -44,15 +44,15 @@ class AtlassianProjectsController {
 				content,
 				pagination: formatPagination(count, hasMore, nextCursor)
 			};
-		} catch (e) { 
+		} catch (e) {
 			methodLogger.error('Failed to list projects:', e);
 			throw new McpError('Failed to list projects', ErrorType.API_ERROR, 500, e as Error);
 		}
 	}
 
 	/**
-     * Get project details by key
-     */
+	 * Get project details by key
+	 */
 	// Method name remains 'get' as used by the CLI
 	async get({ projectKey }: { projectKey: string }) {
 		const methodLogger = controllerLogger.forMethod('get');
@@ -63,7 +63,7 @@ class AtlassianProjectsController {
 			// Use the imported formatter
 			const content = formatProjectDetailsMarkdown(project as RestProject, `Project: ${project.name}`);
 			return { content };
-		} catch (e) { 
+		} catch (e) {
 			methodLogger.error(`Failed to get project ${projectKey}:`, e);
 			throw new McpError(`Failed to get project ${projectKey}`, ErrorType.API_ERROR, 500, e as Error);
 		}

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { projectsService } from '../services/atlassianProjectsService';
 import { formatErrorForMcpTool, createValidationError } from '../utils/error.util.js';
 import { Logger } from '../utils/logger.util';
-import { RestProject } from '../generated';
+import { RestProject } from '../generated/src';
 import { formatProjectDetailsMarkdown } from '../utils/markdownFormatters';
 
 const toolLogger = Logger.forContext('tools/atlassianProjectsMcpTools');
