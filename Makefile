@@ -1,4 +1,4 @@
-.PHONY: app-build app-clean app-rebuild docker-build docker-run docker-all rebuild help
+.PHONY: app-build app-clean app-rebuild docker-build docker-run docker-all rebuild lint help
 
 # Hardcoded Docker image name
 IMAGE_NAME = bitbucket-mcp-server
@@ -8,8 +8,14 @@ install-deps:
 	npm install
 	npm install --save-dev typescript @types/node
 
+# Lint the code
+lint:
+	@echo "🔍 Linting code..."
+	npm run lint
+
 # Build the application locally
-app-build: install-deps
+app-build: install-deps lint
+	@echo "🏗️ Building application (TypeScript)..."
 	npx tsc
 
 # Clean the application build
@@ -18,8 +24,12 @@ app-clean:
 
 # Rebuild the application from scratch
 app-rebuild: app-clean install-deps
+	@echo "📄 Filtering OpenAPI spec..."
 	npm run filter-spec
+	@echo "⚙️ Generating code from OpenAPI spec..."
 	npm run generate
+	@$(MAKE) lint
+	@echo "🏗️ Building application (TypeScript)..."
 	npx tsc
 
 # NEW: Rebuild everything from scratch (Clean, Deps, Generate, Build App, Build Docker)
@@ -32,6 +42,7 @@ rebuild:
 	npm run filter-spec
 	@echo "⚙️ Generating code from OpenAPI spec..."
 	npm run generate
+	@$(MAKE) lint
 	@echo "🏗️ Building application (TypeScript)..."
 	npx tsc
 	@echo "🐳 Building Docker image..."
@@ -82,9 +93,9 @@ help:
 	@echo "Available targets:"
 	@echo ""
 	@echo "Application build targets:"
-	@echo "  app-build       - Build the application locally"
+	@echo "  app-build       - Build the application locally (installs deps, lints, builds)"
 	@echo "  app-clean       - Clean the application build"
-	@echo "  app-rebuild     - Rebuild the application from scratch (including OpenAPI generation)"
+	@echo "  app-rebuild     - Rebuild the application from scratch (cleans, installs deps, generates, lints, builds)"
 	@echo ""
 	@echo "Docker targets:"
 	@echo "  docker-build    - Build the Docker image (requires dist/ folder to exist)"
@@ -93,7 +104,8 @@ help:
 	@echo "  docker-all      - Build and run in one command"
 	@echo ""
 	@echo "Development targets:"
-	@echo "  rebuild         - Clean all, install deps, generate, build app, build docker"
+	@echo "  lint            - Run eslint on the codebase"
+	@echo "  rebuild         - Clean all, install deps, generate, lint, build app, build docker"
 	@echo ""
 	@echo "Environment variables:"
 	@echo "  ATLASSIAN_BITBUCKET_SERVER_URL - Bitbucket server URL"

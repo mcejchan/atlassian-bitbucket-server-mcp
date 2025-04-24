@@ -1,12 +1,12 @@
 import { Logger } from '../utils/logger.util';
 // Import generated API client and types
-import { ProjectApi, GetProjectsRequest } from '../generated/src/apis/ProjectApi';
+import { GetProjectsRequest, ProjectApi } from '../generated/src/apis/ProjectApi';
 // Import types
-import type { RestProject, GetProjects200Response } from '../generated/src/models/index';
+import type { GetProjects200Response, RestProject } from '../generated/src/models/index';
 import { createBitbucketApiConfig } from '../utils/apiConfig'; // Import the factory
 // Import error handling utilities
 import { ApiClientError } from '../utils/apiConfig'; // Import ApiClientError
-import { McpError, ErrorType, createApiError, createNotFoundError, createUnexpectedError } from '../utils/error.util';
+import { createApiError, createNotFoundError, createUnexpectedError } from '../utils/error.util';
 
 /**
  * Service for interacting with Bitbucket Projects API using generated client
