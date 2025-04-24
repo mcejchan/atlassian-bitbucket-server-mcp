@@ -1,11 +1,12 @@
 {
-  "supportsES6": true,
-  "npmName": "@mcp/bitbucket-api",
-  "npmVersion": "1.0.0",
-  "typescriptThreePlus": true,
-  "enumPropertyNaming": "UPPERCASE",
-  "modelPropertyNaming": "camelCase",
-  "apiPackage": "api",
-  "modelPackage": "models",
-  "useSingleRequestParameter": true
-} 
+	"supportsES6": true,
+	"npmName": "@mcp/bitbucket-api",
+	"npmVersion": "1.0.0",
+	"typescriptThreePlus": true,
+	"templateDir": "openapi/templates/typescript-fetch",
+	"enumPropertyNaming": "UPPERCASE",
+	"modelPropertyNaming": "camelCase",
+	"apiPackage": "api",
+	"modelPackage": "models",
+	"useSingleRequestParameter": true
+}

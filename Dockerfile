@@ -11,13 +11,14 @@ RUN apk add --no-cache bash
 COPY package*.json ./
 
 # Install dependencies without running prepare scripts
-RUN npm install --ignore-scripts
+RUN npm install --ignore-scripts --production
 
-# Copy source code
-COPY . .
+# Copy dist folder and entrypoint script only
+COPY dist/ ./dist/
+COPY docker-entrypoint.sh ./
 
-# Build the TypeScript code
-RUN npm run build
+# Create empty .env file if it doesn't get copied
+RUN touch .env
 
 # Make entrypoint script executable
 RUN chmod +x /usr/src/app/docker-entrypoint.sh

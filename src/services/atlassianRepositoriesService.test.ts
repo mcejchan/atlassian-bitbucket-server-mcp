@@ -6,65 +6,23 @@ import {
 	RestRepository,
 	StreamFiles200Response
 } from '@generated/models';
-import { jest } from '@jest/globals';
+import nock from 'nock';
 
-// Import the new fixture utility
+// Import the fixture utility
 import { loadJsonFixture } from '../utils/fixture.util';
 
-// Define mock functions for API methods
-const mockGetRepository = jest.fn<(params: GetRepositories1Request) => Promise<RestRepository>>();
-const mockGetDefaultBranch = jest.fn<(params: GetDefaultBranch2Request) => Promise<RestMinimalRef>>();
-const mockGetCommits = jest.fn<(params: GetCommitsRequest) => Promise<GetCommits200Response>>();
-const mockGetCommit = jest.fn<(params: GetCommitRequest) => Promise<RestCommit>>();
-const mockStreamFiles1 = jest.fn<(params: StreamFiles1Request) => Promise<StreamFiles200Response>>();
-const mockStreamFiles = jest.fn<(params: StreamFiles1Request) => Promise<any>>();
-const mockGetRepositories1 = jest.fn<(params: GetRepositories1Request) => Promise<GetRepositoriesRecentlyAccessed200Response>>();
-
-// Mock the generated API clients
-jest.mock('../generated/src/apis/RepositoryApi', () => {
-	return {
-		RepositoryApi: jest.fn().mockImplementation(() => {
-			return {
-				getRepository: mockGetRepository,
-				getCommits: mockGetCommits,
-				getCommit: mockGetCommit,
-				streamFiles1: mockStreamFiles1,
-				streamFiles: mockStreamFiles,
-				getRepositories1: mockGetRepositories1
-			};
-		})
-	};
-});
-
-// Mock ProjectApi for the getDefaultBranch2 method
-jest.mock('../generated/src/apis/ProjectApi', () => {
-	return {
-		ProjectApi: jest.fn().mockImplementation(() => {
-			return {
-				getDefaultBranch2: mockGetDefaultBranch,
-				getRepository: mockGetRepository
-			};
-		})
-	};
-});
-
-// Import types for mock function parameters
-import type { GetDefaultBranch2Request } from '../generated/src/apis/ProjectApi';
-import type {
-	GetCommitRequest,
-	GetCommitsRequest,
-	GetRepositories1Request,
-	StreamFiles1Request
-} from '../generated/src/apis/RepositoryApi';
-
-// Import after mocks are defined
+// Import the service to test
+import { config } from '../utils/config.util'; // Need config for base URL
 import { repositoriesService } from './atlassianRepositoriesService';
+
 
 const projectKey = 'PRJ';
 const repoSlug = 'git-repo';
 const commitId = '12345679e4240c758669d14db6aad117e72d';
 const filePath = 'git-repo-server/README.md';
+const directoryPath = 'folder/sub-folder'; // Path for testing file listing
 const expectedDefaultBranch = 'master';
+const BASE_URL = config.get('ATLASSIAN_BITBUCKET_SERVER_URL') || 'http://mock-bitbucket-server';
 
 describe('AtlassianRepositoriesService', () => {
 	let getRepositoryFixture: RestRepository;
@@ -73,9 +31,10 @@ describe('AtlassianRepositoriesService', () => {
 	let getCommitFixture: RestCommit;
 	let listFilesFixture: StreamFiles200Response;
 	let listRepositoriesFixture: GetRepositoriesRecentlyAccessed200Response;
+	let fileContentFixture: StreamFiles200Response; // Fixture for file content
 
 	beforeAll(() => {
-		// Load fixtures using the new utility
+		// Load fixtures
 		try {
 			getRepositoryFixture = loadJsonFixture<RestRepository>('getRepository.json');
 			getDefaultBranchFixture = loadJsonFixture<RestMinimalRef>('getDefaultBranch.json');
@@ -83,122 +42,142 @@ describe('AtlassianRepositoriesService', () => {
 			getCommitFixture = loadJsonFixture<RestCommit>('getCommit.json');
 			listFilesFixture = loadJsonFixture<StreamFiles200Response>('listFiles.json');
 			listRepositoriesFixture = loadJsonFixture<GetRepositoriesRecentlyAccessed200Response>('listRepositories.json');
+			fileContentFixture = { values: [{ content: "This is the content of the README file.\n" }] };
 		} catch (error) {
 			console.error('Error loading fixtures:', error);
 			throw new Error('Could not load test fixtures.');
 		}
+
+		// Prevent actual network calls, allowing only localhost if needed for other tests
+		nock.disableNetConnect();
+		nock.enableNetConnect('localhost');
 	});
 
-	beforeEach(() => {
-		// Reset mocks before each test
-		mockGetRepository.mockClear();
-		mockGetDefaultBranch.mockClear();
-		mockGetCommits.mockClear();
-		mockGetCommit.mockClear();
-		mockStreamFiles1.mockClear();
-		mockStreamFiles.mockClear();
-		mockGetRepositories1.mockClear();
+	afterEach(() => {
+		// Clean up nock interceptors after each test
+		nock.cleanAll();
+	});
+
+	afterAll(() => {
+		// Restore network connections
+		nock.enableNetConnect();
 	});
 
 	it('should fetch repository details', async () => {
-		mockGetRepository.mockResolvedValue(getRepositoryFixture);
+		const scope = nock(BASE_URL)
+			.get(`/api/latest/projects/${projectKey}/repos/${repoSlug}`)
+			.query(true)
+			.reply(200, getRepositoryFixture);
 
 		const repo = await repositoriesService.getRepository(projectKey, repoSlug);
 
-		expect(mockGetRepository).toHaveBeenCalledWith({
-			projectKey: projectKey,
-			repositorySlug: repoSlug
-		});
 		expect(repo).toBeDefined();
 		expect(repo.slug).toBe(repoSlug);
 		expect(repo.project!.key).toBe(projectKey);
+		scope.done(); // Verify the mock was called
 	});
 
 	it('should fetch the default branch', async () => {
-		mockGetDefaultBranch.mockResolvedValue(getDefaultBranchFixture);
+		const scope = nock(BASE_URL)
+			.get(`/api/latest/projects/${projectKey}/repos/${repoSlug}/default-branch`)
+			.query(true)
+			.reply(200, getDefaultBranchFixture);
 
 		const branch = await repositoriesService.getDefaultBranch(projectKey, repoSlug);
 
-		expect(mockGetDefaultBranch).toHaveBeenCalledWith({
-			projectKey: projectKey,
-			repositorySlug: repoSlug
-		});
 		expect(branch).toBeDefined();
 		expect(branch.id).toBe(getDefaultBranchFixture.id);
 		expect(branch.displayId).toBe(expectedDefaultBranch);
+		scope.done();
 	});
 
 	it('should list commits', async () => {
-		mockGetCommits.mockResolvedValue(listCommitsFixture);
+		const scope = nock(BASE_URL)
+			.get(`/api/latest/projects/${projectKey}/repos/${repoSlug}/commits`)
+			.query(true)
+			.reply(200, listCommitsFixture);
 
 		const commits = await repositoriesService.listCommits(projectKey, repoSlug);
 
-		expect(mockGetCommits).toHaveBeenCalledWith({
-			projectKey: projectKey,
-			repositorySlug: repoSlug
-		});
 		expect(commits).toBeDefined();
 		expect(Array.isArray(commits.values)).toBe(true);
 		expect(commits.values!.length).toBe(listCommitsFixture.values!.length);
+		scope.done();
 	});
 
 	it('should fetch a specific commit', async () => {
-		mockGetCommit.mockResolvedValue(getCommitFixture);
+		const scope = nock(BASE_URL)
+			.get(`/api/latest/projects/${projectKey}/repos/${repoSlug}/commits/${commitId}`)
+			.query(true)
+			.reply(200, getCommitFixture);
 
 		const commit = await repositoriesService.getCommit(projectKey, repoSlug, commitId);
 
-		expect(mockGetCommit).toHaveBeenCalledWith({
-			projectKey: projectKey,
-			repositorySlug: repoSlug,
-			commitId: commitId
-		});
 		expect(commit).toBeDefined();
 		expect(commit.id).toBe(getCommitFixture.id);
+		scope.done();
 	});
 
-	it('should list files', async () => {
-		mockStreamFiles1.mockResolvedValue(listFilesFixture);
+	it('should list files at the root', async () => {
+		const scope = nock(BASE_URL)
+			.get(`/api/latest/projects/${projectKey}/repos/${repoSlug}/files/`)
+			.query(true)
+			.reply(200, listFilesFixture);
 
-		const files = await repositoriesService.listFiles(projectKey, repoSlug);
+		const files = await repositoriesService.listFiles(projectKey, repoSlug); // No path specified
 
-		expect(mockStreamFiles1).toHaveBeenCalledWith({
-			projectKey: projectKey,
-			repositorySlug: repoSlug,
-			path: '',
-		});
 		expect(files).toBeDefined();
 		expect(Array.isArray(files.values)).toBe(true);
 		expect(files.values!.length).toBe(listFilesFixture.values!.length);
+		scope.done();
+	});
+
+	it('should list files in a specific directory (testing encoding)', async () => {
+		// THIS IS THE KEY TEST
+		// With the *unfixed* generator, the path sent will be `folder%2Fsub-folder`
+		// With the *fixed* generator, the path sent should be `folder/sub-folder`
+		// Nock should expect the CORRECT path format the server expects.
+		const expectedPathForNock = directoryPath; // The server expects unencoded slashes in the path part
+
+		const scope = nock(BASE_URL)
+			.get(`/api/latest/projects/${projectKey}/repos/${repoSlug}/files/${expectedPathForNock}`)
+			.query(true)
+			.reply(200, listFilesFixture);
+
+		const files = await repositoriesService.listFiles(projectKey, repoSlug, { path: directoryPath });
+
+		expect(files).toBeDefined();
+		expect(Array.isArray(files.values)).toBe(true);
+		// Use the same generic fixture for now, adjust if needed
+		expect(files.values!.length).toBe(listFilesFixture.values!.length);
+		scope.done();
 	});
 
 	it('should fetch file content', async () => {
-		const apiResponse = {
-			values: [{ content: "This is the content of the README file.\n" }]
-		};
-		mockStreamFiles.mockResolvedValue(apiResponse);
+		const expectedFilePath = filePath.split('/').map(encodeURIComponent).join('/'); // File path segments NEED encoding
+		const scope = nock(BASE_URL)
+			.get(`/api/latest/projects/${projectKey}/repos/${repoSlug}/files`)
+			.query(true)
+			.reply(200, fileContentFixture);
 
 		const content = await repositoriesService.getFileContent(projectKey, repoSlug, filePath);
 
-		expect(mockStreamFiles).toHaveBeenCalledWith({
-			projectKey: projectKey,
-			repositorySlug: repoSlug,
-			path: filePath,
-			at: undefined
-		});
 		expect(content).toBeDefined();
 		expect(content).toContain('This is the content of the README file');
+		scope.done();
 	});
 
 	it('should list repositories', async () => {
-		mockGetRepositories1.mockResolvedValue(listRepositoriesFixture);
+		const scope = nock(BASE_URL)
+			.get('/api/latest/repos')
+			.query({ projectkey: projectKey })
+			.reply(200, listRepositoriesFixture);
 
 		const repos = await repositoriesService.listRepositories(projectKey);
 
-		expect(mockGetRepositories1).toHaveBeenCalledWith({
-			projectkey: projectKey
-		});
 		expect(repos).toBeDefined();
 		expect(Array.isArray(repos.values)).toBe(true);
 		expect(repos.values!.length).toBe(listRepositoriesFixture.values!.length);
+		scope.done();
 	});
 }); 

@@ -45,6 +45,8 @@ npm start
 
 ## Docker Usage
 
+### Using Docker CLI
+
 ```bash
 # Build
 docker build -t bitbucket-mcp-server .
@@ -54,6 +56,24 @@ docker run --rm -i \
   -e ATLASSIAN_BITBUCKET_SERVER_URL=https://git.your-company.com/ \
   -e ATLASSIAN_BITBUCKET_ACCESS_TOKEN=your-token \
   bitbucket-mcp-server
+```
+
+### Using the Makefile (Recommended)
+
+The project includes a Makefile for simplified Docker operations:
+
+```bash
+# Build the Docker image
+make docker-build
+
+# Run with your Bitbucket credentials
+BITBUCKET_URL=https://git.your-company.com/ BITBUCKET_TOKEN=your-token make docker-run
+
+# Build and run in one command
+BITBUCKET_URL=https://git.your-company.com/ BITBUCKET_TOKEN=your-token make docker-all
+
+# View all available make commands and examples
+make help
 ```
 
 ## Environment Variables
