@@ -56,12 +56,6 @@ temp/
 # Generated code
 src/generated/
 
-# Project cleanup: generated/build artifacts
-scripts/scripts/
-scripts/src/
-scripts/**/*.js
-scripts/**/*.d.ts
-
 # Exclude filtered OpenAPI specifications
 # openapi/bitbucket.pyfiltered.*.openapi.v3.json
 openapi/bitbucket.downloaded.*.openapi.v3.json
