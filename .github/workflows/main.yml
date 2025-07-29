@@ -1,0 +1,20 @@
+name: build-mcp-image
+on:
+  workflow_dispatch:            # ruční spuštění
+  push:
+    paths: ["Dockerfile", "src/**", "package.json"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write           # povolí push do GHCR
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/bitbucket-mcp-server:latest
