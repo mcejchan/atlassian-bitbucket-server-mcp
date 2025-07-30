@@ -31,7 +31,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.14.0'
+          node-version: '22.16.0'   # poslední patch řady 22; funguje i 22.5.1+
+          check-latest: true        # vynutí stažení právě této patch-verze
           cache: npm
 
       # 3 Dependencies
