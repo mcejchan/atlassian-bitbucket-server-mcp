@@ -1,127 +1,74 @@
-name: CI & Release
+name: CI – Build & Push GHCR
 
-# Triggers:
-# 1. Push to main (releases)
-# 2. Pull‑request targeting main (CI checks)
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'Dockerfile'
+      - '.github/workflows/ci-cd.yml'
 
 jobs:
-  build_and_release:
-    name: Build & Release
+  build-push:
     runs-on: ubuntu-latest
 
-    # Permissions for releases, issue comments, PR comments
+    # Grant minimal rights: read repo content + write to GitHub Container Registry
     permissions:
-      contents: write
-      issues:   write
-      pull-requests: write
+      contents: read
+      packages: write
 
     steps:
-      # 1 Checkout full history (semantic‑release needs tags)
-      - name: Checkout
+      # 1 Checkout repo
+      - name: Checkout source
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      # 2 Node.js
+      # 2 Node JS (use same major version as lokální build)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.16.0'   # poslední patch řady 22; funguje i 22.5.1+
-          check-latest: true        # vynutí stažení právě této patch-verze
+          node-version: '22.16.0'
           cache: npm
 
-      # 3 Dependencies
+      # 3 Install deps
       - name: Install dependencies
         run: npm ci
 
-      # 4 Generate code from OpenAPI
-      - name: Generate Code
+      # 4 Generate OpenAPI client code
+      - name: Generate code from OpenAPI spec
         run: npm run generate
 
       # 5 Lint
-      - name: Lint Check
+      - name: Lint
         run: npm run lint
 
-      # 6 Build
+      # 6 Build TypeScript → dist/
       - name: Build
         run: npm run build
 
-      # 7 Make built file executable
-      - name: Set executable permissions
-        run: chmod +x dist/index.js
-
-      # 8 Run tests
-      - name: Verify tests
+      # 7 Run tests
+      - name: Test
         run: npm test
 
-      # --- Release‑only steps (push → main) ---
-
-      # 9 Buildx / QEMU
-      - name: Set up QEMU
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: docker/setup-buildx-action@v3
-
-      # 10 Login to **GitHub Container Registry (GHCR)**
+      # 8 Login to GHCR with built‑in GitHub token (no extra secret needed)
       - name: Login to GHCR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.repository_owner }}
+          username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 11 Configure Git (semantic‑release tag + changelog commit)
-      - name: Configure Git User
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name  "github-actions[bot]"
+      # 9 Enable Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      # 12 Semantic‑release dry run – discover next version
-      - name: Determine next version (dry run)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        id: semantic_dry_run
-        env:
-          GH_TOKEN:  ${{ secrets.GH_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          output=$(npx semantic-release --dry-run)
-          VERSION=$(echo "$output" | grep -oP 'Published release \K[0-9]+\.[0-9]+\.[0-9]+')
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "$output"
-
-      # 13 Build + push Docker image to GHCR
+      # 10 Build & push image
       - name: Build and push Docker image
-        if: steps.semantic_dry_run.outputs.version && github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ steps.semantic_dry_run.outputs.version }}
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
-          # optionally add SHA tag:
-          #   ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.sha }}
-
-      # 14 Semantic‑release final (publish npm, release notes, tag)
-      - name: Semantic Release (final)
-        id: semantic_final
-        if: steps.semantic_dry_run.outputs.version && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN:  ${{ secrets.GH_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          npx semantic-release
-
-      # 15 Fallback when no release created
-      - name: No release needed
-        if: (!steps.semantic_dry_run.outputs.version) && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: echo "No new version detected – skipping Docker push and final semantic‑release."
+            ghcr.io/${{ github.repository_owner }}/bitbucket-mcp-server:latest
+            ghcr.io/${{ github.repository_owner }}/bitbucket-mcp-server:${{ github.sha }}
