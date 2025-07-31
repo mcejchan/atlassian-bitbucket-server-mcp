@@ -2,6 +2,7 @@ import { Logger } from '../utils/logger.util';
 import { config } from '../utils/config.util.js';
 import { ProjectApi } from '../generated/src/apis/ProjectApi';
 import { RepositoryApi } from '../generated/src/apis/RepositoryApi';
+
 // Remove direct Configuration/Middleware imports
 // Import specific request/response types needed
 import type {
@@ -106,35 +107,45 @@ export class AtlassianRepositoriesService {
 	 * @param atRef Optional branch, tag, or commit (defaults to default branch).
 	 * @returns A promise resolving to the file content as a string.
 	 */
-	async getFileContent(projectKey: string, repoSlug: string, filePath: string, atRef?: string): Promise<string> {
-		if (!projectKey || !repoSlug || !filePath) {
-			throw new Error('projectKey, repoSlug, and filePath are required');
-		}
-		// základní URL instance Bitbucketu
-		const baseUrl = process.env.ATLASSIAN_BITBUCKET_SERVER_URL ||
-						config.get('ATLASSIAN_BITBUCKET_SERVER_URL');
-		if (!baseUrl) {
-			throw new Error('Environment variable ATLASSIAN_BITBUCKET_SERVER_URL is not set');
-		}
-		// zakódujeme parametry do URL (cestu je nutné encodeovat po segmentech)
-		const encodedPath = filePath.split('/').map(encodeURIComponent).join('/');
-		const refQuery = atRef ? `?at=${encodeURIComponent(atRef)}` : '';
-		const url = `${baseUrl}/rest/api/1.0/projects/${encodeURIComponent(projectKey)}/repos/${encodeURIComponent(repoSlug)}/raw/${encodedPath}${refQuery}`;
+	async getFileContent(
+	projectKey: string,
+	repoSlug: string,
+	filePath: string,
+	atRef?: string
+	): Promise<string> {
+	if (!projectKey || !repoSlug || !filePath) {
+		throw new Error('projectKey, repoSlug, and filePath are required');
+	}
+	const methodLogger = this.logger.forMethod('getFileContent');
+	methodLogger.debug(`Getting file content for ${filePath} in ${projectKey}/${repoSlug} at ${atRef ?? 'default'}`);
 
-		// hlavičky včetně tokenu
-		const headers: Record<string, string> = {};
-		const token = process.env.ATLASSIAN_BITBUCKET_ACCESS_TOKEN ||
-					config.get('ATLASSIAN_BITBUCKET_ACCESS_TOKEN');
-		if (token) {
-			headers['Authorization'] = `Bearer ${token}`;
-		}
+	const request: StreamFiles1Request = {
+		projectKey: projectKey,
+		repositorySlug: repoSlug,
+		path: filePath,
+		at: atRef,
+	};
+	const apiResponse = await this.repositoryApi.streamFiles(request);
 
-		const response = await fetch(url, { headers });
-		if (!response.ok) {
-			const text = await response.text();
-			throw new Error(`Failed to fetch file content: ${response.status} ${response.statusText} - ${text}`);
+	let content = '';
+	// Bez ohledu na to, jestli se endpoint jmenuje streamFiles, vrací paged „values“.
+	if (apiResponse.values && apiResponse.values.length > 0) {
+		const first = apiResponse.values[0] as any;
+		// některé implementace mají "content", jiné "text" nebo "lines"
+		if (typeof first.content === 'string') {
+		content = first.content;
+		} else if (typeof first.text === 'string') {
+		content = first.text;
+		} else if (Array.isArray(first.lines)) {
+		content = first.lines.join('\n');
+		} else {
+		// fallback – vezmeme serializovanou hodnotu
+		content = JSON.stringify(first);
 		}
-		return await response.text();
+	} else {
+		methodLogger.warn(`No values returned from streamFiles for ${filePath}`);
+	}
+	return content;
 	}
 
 	/**
