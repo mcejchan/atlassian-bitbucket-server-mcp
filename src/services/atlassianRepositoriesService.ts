@@ -108,11 +108,11 @@ export class AtlassianRepositoriesService {
 	 * @returns A promise resolving to the file content as a string.
 	 */
 	async getFileContent(
-			projectKey: string,
-			repoSlug: string,
-			filePath: string,
-			atRef?: string
-			): Promise<string> {
+		projectKey: string,
+		repoSlug: string,
+		filePath: string,
+		atRef?: string
+	): Promise<string> {
 		if (!projectKey || !repoSlug || !filePath) {
 			throw new Error('projectKey, repoSlug, and filePath are required');
 		}
