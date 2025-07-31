@@ -1,4 +1,5 @@
 import { Logger } from '../utils/logger.util';
+import { config } from '../utils/config.util.js';
 import { ProjectApi } from '../generated/src/apis/ProjectApi';
 import { RepositoryApi } from '../generated/src/apis/RepositoryApi';
 // Remove direct Configuration/Middleware imports
@@ -105,38 +106,36 @@ export class AtlassianRepositoriesService {
 	 * @param atRef Optional branch, tag, or commit (defaults to default branch).
 	 * @returns A promise resolving to the file content as a string.
 	 */
-	async getFileContent(
-		projectKey: string,
-		repoSlug: string,
-		filePath: string,
-		atRef?: string
-	): Promise<string> {
-		if (!projectKey || !repoSlug || !filePath) {
-			throw new Error('projectKey, repoSlug, and filePath parameters are required');
+	async getFileContent(projectKey: string, repoSlug: string, filePath: string, atRef?: string): Promise<string> {
+		  if (!projectKey || !repoSlug || !filePath) {
+		    throw new Error('projectKey, repoSlug, and filePath are required');
+		  }
+		  // základní URL instance Bitbucketu
+		  const baseUrl = process.env.ATLASSIAN_BITBUCKET_SERVER_URL ||
+		                  config.get('ATLASSIAN_BITBUCKET_SERVER_URL');
+		  if (!baseUrl) {
+		    throw new Error('Environment variable ATLASSIAN_BITBUCKET_SERVER_URL is not set');
+		  }
+		  // zakódujeme parametry do URL (cestu je nutné encodeovat po segmentech)
+		  const encodedPath = filePath.split('/').map(encodeURIComponent).join('/');
+		  const refQuery = atRef ? `?at=${encodeURIComponent(atRef)}` : '';
+		  const url = `${baseUrl}/rest/api/1.0/projects/${encodeURIComponent(projectKey)}/repos/${encodeURIComponent(repoSlug)}/raw/${encodedPath}${refQuery}`;
+		
+		  // hlavičky včetně tokenu
+		  const headers: Record<string, string> = {};
+		  const token = process.env.ATLASSIAN_BITBUCKET_ACCESS_TOKEN ||
+		                config.get('ATLASSIAN_BITBUCKET_ACCESS_TOKEN');
+		  if (token) {
+		    headers['Authorization'] = `Bearer ${token}`;
+		  }
+		
+		  const response = await fetch(url, { headers });
+		  if (!response.ok) {
+		    const text = await response.text();
+		    throw new Error(`Failed to fetch file content: ${response.status} ${response.statusText} - ${text}`);
+		  }
+		  return await response.text();
 		}
-		const methodLogger = this.logger.forMethod('getFileContent');
-		methodLogger.debug(`Getting file content for ${filePath} in repo: ${repoSlug}, project: ${projectKey}, at: ${atRef || 'default'}`);
-
-		const request: StreamFiles1Request = {
-			projectKey: projectKey,
-			repositorySlug: repoSlug,
-			path: filePath,
-			at: atRef
-		};
-
-		const apiResponse = await this.repositoryApi.streamFiles(request);
-
-		// Process the streamFiles response based on the actual structure
-		// This is a placeholder implementation
-		let content = '';
-		if (apiResponse.values && apiResponse.values.length > 0) {
-			// Assuming the first value contains content property
-			content = JSON.stringify(apiResponse.values);
-		}
-
-		methodLogger.debug(`Retrieved file content for ${filePath} (length: ${content.length})`);
-		return content;
-	}
 
 	/**
 	 * Lists branches for a given repository.
