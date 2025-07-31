@@ -107,35 +107,35 @@ export class AtlassianRepositoriesService {
 	 * @returns A promise resolving to the file content as a string.
 	 */
 	async getFileContent(projectKey: string, repoSlug: string, filePath: string, atRef?: string): Promise<string> {
-		  if (!projectKey || !repoSlug || !filePath) {
-		    throw new Error('projectKey, repoSlug, and filePath are required');
-		  }
-		  // základní URL instance Bitbucketu
-		  const baseUrl = process.env.ATLASSIAN_BITBUCKET_SERVER_URL ||
-		                  config.get('ATLASSIAN_BITBUCKET_SERVER_URL');
-		  if (!baseUrl) {
-		    throw new Error('Environment variable ATLASSIAN_BITBUCKET_SERVER_URL is not set');
-		  }
-		  // zakódujeme parametry do URL (cestu je nutné encodeovat po segmentech)
-		  const encodedPath = filePath.split('/').map(encodeURIComponent).join('/');
-		  const refQuery = atRef ? `?at=${encodeURIComponent(atRef)}` : '';
-		  const url = `${baseUrl}/rest/api/1.0/projects/${encodeURIComponent(projectKey)}/repos/${encodeURIComponent(repoSlug)}/raw/${encodedPath}${refQuery}`;
-		
-		  // hlavičky včetně tokenu
-		  const headers: Record<string, string> = {};
-		  const token = process.env.ATLASSIAN_BITBUCKET_ACCESS_TOKEN ||
-		                config.get('ATLASSIAN_BITBUCKET_ACCESS_TOKEN');
-		  if (token) {
-		    headers['Authorization'] = `Bearer ${token}`;
-		  }
-		
-		  const response = await fetch(url, { headers });
-		  if (!response.ok) {
-		    const text = await response.text();
-		    throw new Error(`Failed to fetch file content: ${response.status} ${response.statusText} - ${text}`);
-		  }
-		  return await response.text();
+		if (!projectKey || !repoSlug || !filePath) {
+			throw new Error('projectKey, repoSlug, and filePath are required');
 		}
+		// základní URL instance Bitbucketu
+		const baseUrl = process.env.ATLASSIAN_BITBUCKET_SERVER_URL ||
+						config.get('ATLASSIAN_BITBUCKET_SERVER_URL');
+		if (!baseUrl) {
+			throw new Error('Environment variable ATLASSIAN_BITBUCKET_SERVER_URL is not set');
+		}
+		// zakódujeme parametry do URL (cestu je nutné encodeovat po segmentech)
+		const encodedPath = filePath.split('/').map(encodeURIComponent).join('/');
+		const refQuery = atRef ? `?at=${encodeURIComponent(atRef)}` : '';
+		const url = `${baseUrl}/rest/api/1.0/projects/${encodeURIComponent(projectKey)}/repos/${encodeURIComponent(repoSlug)}/raw/${encodedPath}${refQuery}`;
+
+		// hlavičky včetně tokenu
+		const headers: Record<string, string> = {};
+		const token = process.env.ATLASSIAN_BITBUCKET_ACCESS_TOKEN ||
+					config.get('ATLASSIAN_BITBUCKET_ACCESS_TOKEN');
+		if (token) {
+			headers['Authorization'] = `Bearer ${token}`;
+		}
+
+		const response = await fetch(url, { headers });
+		if (!response.ok) {
+			const text = await response.text();
+			throw new Error(`Failed to fetch file content: ${response.status} ${response.statusText} - ${text}`);
+		}
+		return await response.text();
+	}
 
 	/**
 	 * Lists branches for a given repository.
