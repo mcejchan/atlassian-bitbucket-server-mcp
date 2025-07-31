@@ -134,7 +134,7 @@ export class AtlassianRepositoriesService {
 			const normalizedTarget = filePath.replace(/^\/+/, '').toLowerCase();
 
 			// zkus najít přesnou shodu podle path
-			let target: any =
+			const target: any =
 				apiResponse.values.find(
 					(item: any) =>
 						item?.path?.replace(/^\/+/, '').toLowerCase() === normalizedTarget
