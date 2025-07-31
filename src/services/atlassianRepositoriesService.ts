@@ -1,5 +1,4 @@
 import { Logger } from '../utils/logger.util';
-import { config } from '../utils/config.util.js';
 import { ProjectApi } from '../generated/src/apis/ProjectApi';
 import { RepositoryApi } from '../generated/src/apis/RepositoryApi';
 
