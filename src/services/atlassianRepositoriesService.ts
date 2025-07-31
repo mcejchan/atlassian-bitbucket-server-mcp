@@ -108,44 +108,44 @@ export class AtlassianRepositoriesService {
 	 * @returns A promise resolving to the file content as a string.
 	 */
 	async getFileContent(
-	projectKey: string,
-	repoSlug: string,
-	filePath: string,
-	atRef?: string
-	): Promise<string> {
-	if (!projectKey || !repoSlug || !filePath) {
-		throw new Error('projectKey, repoSlug, and filePath are required');
-	}
-	const methodLogger = this.logger.forMethod('getFileContent');
-	methodLogger.debug(`Getting file content for ${filePath} in ${projectKey}/${repoSlug} at ${atRef ?? 'default'}`);
-
-	const request: StreamFiles1Request = {
-		projectKey: projectKey,
-		repositorySlug: repoSlug,
-		path: filePath,
-		at: atRef,
-	};
-	const apiResponse = await this.repositoryApi.streamFiles(request);
-
-	let content = '';
-	// Bez ohledu na to, jestli se endpoint jmenuje streamFiles, vrací paged „values“.
-	if (apiResponse.values && apiResponse.values.length > 0) {
-		const first = apiResponse.values[0] as any;
-		// některé implementace mají "content", jiné "text" nebo "lines"
-		if (typeof first.content === 'string') {
-		content = first.content;
-		} else if (typeof first.text === 'string') {
-		content = first.text;
-		} else if (Array.isArray(first.lines)) {
-		content = first.lines.join('\n');
-		} else {
-		// fallback – vezmeme serializovanou hodnotu
-		content = JSON.stringify(first);
+			projectKey: string,
+			repoSlug: string,
+			filePath: string,
+			atRef?: string
+			): Promise<string> {
+		if (!projectKey || !repoSlug || !filePath) {
+			throw new Error('projectKey, repoSlug, and filePath are required');
 		}
-	} else {
-		methodLogger.warn(`No values returned from streamFiles for ${filePath}`);
-	}
-	return content;
+		const methodLogger = this.logger.forMethod('getFileContent');
+		methodLogger.debug(`Getting file content for ${filePath} in ${projectKey}/${repoSlug} at ${atRef ?? 'default'}`);
+
+		const request: StreamFiles1Request = {
+			projectKey: projectKey,
+			repositorySlug: repoSlug,
+			path: filePath,
+			at: atRef,
+		};
+		const apiResponse = await this.repositoryApi.streamFiles(request);
+
+		let content = '';
+		// Bez ohledu na to, jestli se endpoint jmenuje streamFiles, vrací paged „values“.
+		if (apiResponse.values && apiResponse.values.length > 0) {
+			const first = apiResponse.values[0] as any;
+			// některé implementace mají "content", jiné "text" nebo "lines"
+			if (typeof first.content === 'string') {
+				content = first.content;
+			} else if (typeof first.text === 'string') {
+				content = first.text;
+			} else if (Array.isArray(first.lines)) {
+				content = first.lines.join('\n');
+			} else {
+				// fallback – vezmeme serializovanou hodnotu
+				content = JSON.stringify(first);
+			}
+		} else {
+			methodLogger.warn(`No values returned from streamFiles for ${filePath}`);
+		}
+		return content;
 	}
 
 	/**
