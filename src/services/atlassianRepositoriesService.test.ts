@@ -154,16 +154,66 @@ describe('AtlassianRepositoriesService', () => {
 	});
 
 	it('should fetch file content', async () => {
-		const expectedFilePath = filePath.split('/').map(encodeURIComponent).join('/'); // File path segments NEED encoding
+		const fileContent = "This is the content of the README file.\n";
+		
+		// Správný endpoint pro raw content
+		// Bitbucket Server používá /raw/{path} endpoint
+		const encodedFilePath = filePath.split('/').map(encodeURIComponent).join('/');
+		
 		const scope = nock(BASE_URL)
-			.get(`/api/latest/projects/${projectKey}/repos/${repoSlug}/files`)
-			.query(true)
-			.reply(200, fileContentFixture);
+			.get(`/api/latest/projects/${projectKey}/repos/${repoSlug}/raw/${encodedFilePath}`)
+			.query(true) // Akceptuje jakékoliv query parametry (např. at=branch)
+			.reply(200, fileContent, {
+				'Content-Type': 'text/plain; charset=UTF-8'
+			});
 
 		const content = await repositoriesService.getFileContent(projectKey, repoSlug, filePath);
 
 		expect(content).toBeDefined();
+		expect(content).toBe(fileContent);
 		expect(content).toContain('This is the content of the README file');
+		scope.done();
+	});
+
+	// Test s konkrétním ref (branch/tag/commit)
+	it('should fetch file content at specific ref', async () => {
+		const fileContent = "Content at specific branch\n";
+		const ref = 'feature/test-branch';
+		const encodedFilePath = filePath.split('/').map(encodeURIComponent).join('/');
+		
+		const scope = nock(BASE_URL)
+			.get(`/api/latest/projects/${projectKey}/repos/${repoSlug}/raw/${encodedFilePath}`)
+			.query({ at: ref })
+			.reply(200, fileContent, {
+				'Content-Type': 'text/plain; charset=UTF-8'
+			});
+
+		const content = await repositoriesService.getFileContent(projectKey, repoSlug, filePath, ref);
+
+		expect(content).toBeDefined();
+		expect(content).toBe(fileContent);
+		scope.done();
+	});
+
+	// Test pro chybu když soubor neexistuje
+	it('should handle error when file does not exist', async () => {
+		const encodedFilePath = filePath.split('/').map(encodeURIComponent).join('/');
+		
+		const scope = nock(BASE_URL)
+			.get(`/api/latest/projects/${projectKey}/repos/${repoSlug}/raw/${encodedFilePath}`)
+			.query(true)
+			.reply(404, {
+				errors: [{
+					context: null,
+					message: 'File not found',
+					exceptionName: 'com.atlassian.bitbucket.repository.NoSuchPathException'
+				}]
+			});
+
+		await expect(
+			repositoriesService.getFileContent(projectKey, repoSlug, filePath)
+		).rejects.toThrow('Failed to fetch file content: 404');
+		
 		scope.done();
 	});
 
