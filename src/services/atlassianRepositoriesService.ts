@@ -125,10 +125,10 @@ export class AtlassianRepositoriesService {
 			// Zkusíme najít metodu getRaw v RepositoryApi
 			const repoApiAny = this.repositoryApi as any;
 			
-			if (typeof repoApiAny.getRaw === 'function') {
-				methodLogger.debug('Using getRaw method from generated API');
+			if (typeof repoApiAny.streamFileContentRaw === 'function') {
+				methodLogger.warn('Using streamFileContentRaw method from generated API');
 				
-				const response = await repoApiAny.getRaw({
+				const response = await repoApiAny.streamFileContentRaw({
 					projectKey,
 					repositorySlug: repoSlug,
 					path: filePath,
@@ -150,7 +150,7 @@ export class AtlassianRepositoriesService {
 			}
 			
 			// Pokud getRaw neexistuje, použijeme přímé volání fetch
-			methodLogger.debug('getRaw method not found, using direct fetch');
+			methodLogger.warn('streamFileContentRaw method not found, using direct fetch');
 			
 			const config = createBitbucketApiConfig();
 			const baseURL = config.basePath;
