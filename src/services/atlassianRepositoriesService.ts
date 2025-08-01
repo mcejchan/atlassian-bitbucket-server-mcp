@@ -131,38 +131,47 @@ export class AtlassianRepositoriesService {
 		const apiResponse = await this.repositoryApi.streamFiles(request);
 
 		if (apiResponse?.values?.length) {
-			// Test fixture vrací: { values: [{ content: "This is the content of the README file.\n" }] }
-			// Takže první prvek má vlastnost 'content'
-			const firstValue = apiResponse.values[0];
+			// V testu je definováno: fileContentFixture = { values: [{ content: "This is the content of the README file.\n" }] }
+			// Takže když voláme API s path parametrem pro konkrétní soubor, měli bychom dostat obsah
 			
-			// Primárně hledáme vlastnost 'content'
-			if (firstValue && typeof firstValue.content === 'string') {
-				return firstValue.content;
+			// Nejprve zkusíme najít položku, která odpovídá našemu souboru
+			const normalizedTarget = filePath.replace(/^\/+/, '').toLowerCase();
+			
+			let targetItem = apiResponse.values.find((item: any) => {
+				// Pokud má položka path, porovnáme ji
+				if (item?.path) {
+					const normalizedItemPath = item.path.replace(/^\/+/, '').toLowerCase();
+					return normalizedItemPath === normalizedTarget;
+				}
+				// Pokud nemá path a je to jediná položka, pravděpodobně je to obsah souboru
+				return apiResponse.values.length === 1;
+			});
+
+			// Pokud jsme nenašli položku podle path a máme jen jednu položku, použijeme ji
+			if (!targetItem && apiResponse.values.length === 1) {
+				targetItem = apiResponse.values[0];
 			}
-			
-			// Alternativní vlastnosti pro obsah souboru
-			if (firstValue && typeof firstValue.text === 'string') {
-				return firstValue.text;
+
+			if (targetItem) {
+				// Extrahujeme obsah z různých možných formátů
+				if (typeof targetItem.content === 'string') {
+					return targetItem.content;
+				}
+				if (typeof targetItem.text === 'string') {
+					return targetItem.text;
+				}
+				if (Array.isArray(targetItem.lines)) {
+					return targetItem.lines.map((line: any) => 
+						typeof line === 'object' && line.text !== undefined ? line.text : String(line)
+					).join('\n');
+				}
+				
+				// Debug informace
+				methodLogger.debug('Target item structure:', targetItem);
 			}
-			
-			// Některé API verze vracejí řádky jako pole
-			if (firstValue && Array.isArray(firstValue.lines)) {
-				return firstValue.lines.map((line: any) => 
-					typeof line === 'object' && line.text !== undefined ? line.text : String(line)
-				).join('\n');
-			}
-			
-			// Pokud je první hodnota přímo string
-			if (typeof firstValue === 'string') {
-				return firstValue;
-			}
-			
-			// Fallback - serializujeme objekt
-			methodLogger.warn(`Unexpected response structure for file content:`, firstValue);
-			return JSON.stringify(firstValue);
 		}
 
-		methodLogger.warn(`No matching values returned from streamFiles for ${filePath}`);
+		methodLogger.warn(`No content found for file ${filePath}`);
 		return '';
 	}
 
