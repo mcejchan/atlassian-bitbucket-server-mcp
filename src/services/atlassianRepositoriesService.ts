@@ -122,27 +122,36 @@ export class AtlassianRepositoriesService {
 		);
 
 		try {
-			// Nejprve zkusíme najít metodu getRaw nebo raw1 v RepositoryApi
-			// Pokud existuje getRaw metoda v generovaném API:
-			if ('getRaw' in this.repositoryApi) {
-				const response = await (this.repositoryApi as any).getRaw({
+			// Zkusíme najít metodu getRaw v RepositoryApi
+			const repoApiAny = this.repositoryApi as any;
+			
+			if (typeof repoApiAny.getRaw === 'function') {
+				methodLogger.debug('Using getRaw method from generated API');
+				
+				const response = await repoApiAny.getRaw({
 					projectKey,
 					repositorySlug: repoSlug,
 					path: filePath,
 					at: atRef
 				});
 				
-				// Response může být Blob nebo Response objekt
-				if (response instanceof Blob) {
-					return await response.text();
-				} else if (response instanceof Response) {
-					return await response.text();
-				} else if (typeof response === 'string') {
+				// Zpracování různých typů odpovědí
+				if (typeof response === 'string') {
 					return response;
 				}
+				
+				// Pokud má response metodu text() (jako Blob nebo Response)
+				if (response && typeof response.text === 'function') {
+					return await response.text();
+				}
+				
+				// Fallback - převedeme na string
+				return String(response);
 			}
 			
-			// Pokud getRaw neexistuje, musíme použít přímé volání fetch
+			// Pokud getRaw neexistuje, použijeme přímé volání fetch
+			methodLogger.debug('getRaw method not found, using direct fetch');
+			
 			const config = createBitbucketApiConfig();
 			const baseURL = config.basePath;
 			const headers = config.headers || {};
@@ -159,9 +168,7 @@ export class AtlassianRepositoriesService {
 			
 			// Přidáme query parametr pro ref
 			if (atRef) {
-				const params = new URLSearchParams();
-				params.append('at', atRef);
-				url += `?${params.toString()}`;
+				url += `?at=${encodeURIComponent(atRef)}`;
 			}
 			
 			methodLogger.debug(`Fetching raw content from: ${url}`);
