@@ -144,7 +144,7 @@ export class AtlassianRepositoriesService {
 					return normalizedItemPath === normalizedTarget;
 				}
 				// Pokud nemá path a je to jediná položka, pravděpodobně je to obsah souboru
-				return apiResponse.values.length === 1;
+				return apiResponse.values?.length === 1;
 			});
 
 			// Pokud jsme nenašli položku podle path a máme jen jednu položku, použijeme ji
