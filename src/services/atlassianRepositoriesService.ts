@@ -121,58 +121,76 @@ export class AtlassianRepositoriesService {
 			`Getting file content for ${filePath} in ${projectKey}/${repoSlug} at ${atRef ?? 'default'}`
 		);
 
-		const request: StreamFiles1Request = {
-			projectKey,
-			repositorySlug: repoSlug,
-			path: filePath,
-			at: atRef
-		};
-		
-		const apiResponse = await this.repositoryApi.streamFiles(request);
-
-		if (apiResponse?.values?.length) {
-			// V testu je definováno: fileContentFixture = { values: [{ content: "This is the content of the README file.\n" }] }
-			// Takže když voláme API s path parametrem pro konkrétní soubor, měli bychom dostat obsah
-			
-			// Nejprve zkusíme najít položku, která odpovídá našemu souboru
-			const normalizedTarget = filePath.replace(/^\/+/, '').toLowerCase();
-			
-			let targetItem = apiResponse.values.find((item: any) => {
-				// Pokud má položka path, porovnáme ji
-				if (item?.path) {
-					const normalizedItemPath = item.path.replace(/^\/+/, '').toLowerCase();
-					return normalizedItemPath === normalizedTarget;
-				}
-				// Pokud nemá path a je to jediná položka, pravděpodobně je to obsah souboru
-				return apiResponse.values?.length === 1;
-			});
-
-			// Pokud jsme nenašli položku podle path a máme jen jednu položku, použijeme ji
-			if (!targetItem && apiResponse.values.length === 1) {
-				targetItem = apiResponse.values[0];
-			}
-
-			if (targetItem) {
-				// Extrahujeme obsah z různých možných formátů
-				if (typeof targetItem.content === 'string') {
-					return targetItem.content;
-				}
-				if (typeof targetItem.text === 'string') {
-					return targetItem.text;
-				}
-				if (Array.isArray(targetItem.lines)) {
-					return targetItem.lines.map((line: any) => 
-						typeof line === 'object' && line.text !== undefined ? line.text : String(line)
-					).join('\n');
-				}
+		try {
+			// Nejprve zkusíme najít metodu getRaw nebo raw1 v RepositoryApi
+			// Pokud existuje getRaw metoda v generovaném API:
+			if ('getRaw' in this.repositoryApi) {
+				const response = await (this.repositoryApi as any).getRaw({
+					projectKey,
+					repositorySlug: repoSlug,
+					path: filePath,
+					at: atRef
+				});
 				
-				// Debug informace
-				methodLogger.debug('Target item structure:', targetItem);
+				// Response může být Blob nebo Response objekt
+				if (response instanceof Blob) {
+					return await response.text();
+				} else if (response instanceof Response) {
+					return await response.text();
+				} else if (typeof response === 'string') {
+					return response;
+				}
 			}
+			
+			// Pokud getRaw neexistuje, musíme použít přímé volání fetch
+			const config = createBitbucketApiConfig();
+			const baseURL = config.basePath;
+			const headers = config.headers || {};
+			
+			// Správně zakódujeme části URL
+			const encodedProjectKey = encodeURIComponent(projectKey);
+			const encodedRepoSlug = encodeURIComponent(repoSlug);
+			
+			// Pro cestu k souboru zachováme lomítka, ale zakódujeme ostatní znaky
+			const encodedFilePath = filePath.split('/').map(encodeURIComponent).join('/');
+			
+			// Konstruujeme URL pro /raw endpoint
+			let url = `${baseURL}/projects/${encodedProjectKey}/repos/${encodedRepoSlug}/raw/${encodedFilePath}`;
+			
+			// Přidáme query parametr pro ref
+			if (atRef) {
+				const params = new URLSearchParams();
+				params.append('at', atRef);
+				url += `?${params.toString()}`;
+			}
+			
+			methodLogger.debug(`Fetching raw content from: ${url}`);
+			
+			const response = await fetch(url, {
+				method: 'GET',
+				headers: {
+					...headers,
+					'Accept': '*/*'
+				}
+			});
+			
+			if (!response.ok) {
+				const errorText = await response.text();
+				throw new Error(
+					`Failed to fetch file content: ${response.status} ${response.statusText}. ` +
+					`Response: ${errorText}`
+				);
+			}
+			
+			const content = await response.text();
+			methodLogger.debug(`Retrieved ${content.length} bytes of content`);
+			
+			return content;
+			
+		} catch (error) {
+			methodLogger.error(`Error fetching file content for ${filePath}:`, error);
+			throw error;
 		}
-
-		methodLogger.warn(`No content found for file ${filePath}`);
-		return '';
 	}
 
 
