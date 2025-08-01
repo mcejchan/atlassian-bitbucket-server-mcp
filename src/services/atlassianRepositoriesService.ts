@@ -164,7 +164,7 @@ export class AtlassianRepositoriesService {
 			const encodedFilePath = filePath.split('/').map(encodeURIComponent).join('/');
 			
 			// Konstruujeme URL pro /raw endpoint
-			let url = `${baseURL}/projects/${encodedProjectKey}/repos/${encodedRepoSlug}/raw/${encodedFilePath}`;
+			let url = `${baseURL}/api/latest/projects/${encodedProjectKey}/repos/${encodedRepoSlug}/raw/${encodedFilePath}`;
 			
 			// Přidáme query parametr pro ref
 			if (atRef) {
