@@ -134,7 +134,8 @@ export class AtlassianRepositoriesService {
 					path: filePath,
 					at: atRef
 				});
-				return await apiResponse.text();
+				const text = await apiResponse.raw.text();
+				return text;
 			}
 			
 			// Pokud getRaw neexistuje, použijeme přímé volání fetch
